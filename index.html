@@ -12,122 +12,49 @@
 <meta name="theme-color" content="#185FA5">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
   * { box-sizing: border-box; margin: 0; padding: 0; }
-
   :root {
-    --bg-primary: #ffffff;
-    --bg-secondary: #f5f5f4;
-    --bg-tertiary: #eae9e6;
-    --text-primary: #1a1a1a;
-    --text-secondary: #6b6b6b;
-    --border: rgba(0,0,0,0.12);
-    --border-med: rgba(0,0,0,0.2);
-    --radius-md: 8px;
-    --radius-lg: 12px;
-    --blue: #185FA5;
-    --blue-light: #E6F1FB;
-    --blue-dark: #0C447C;
-    --green: #0F6E56;
-    --green-light: #E1F5EE;
-    --green-dark: #085041;
-    --amber-light: #FAEEDA;
-    --amber-dark: #633806;
-    --red: #A32D2D;
+    --bg-primary: #ffffff; --bg-secondary: #f5f5f4; --bg-tertiary: #eae9e6;
+    --text-primary: #1a1a1a; --text-secondary: #6b6b6b;
+    --border: rgba(0,0,0,0.12); --border-med: rgba(0,0,0,0.2);
+    --radius-md: 8px; --radius-lg: 12px;
+    --blue: #185FA5; --blue-light: #E6F1FB; --blue-dark: #0C447C;
+    --green: #0F6E56; --green-light: #E1F5EE; --green-dark: #085041;
+    --amber-light: #FAEEDA; --amber-dark: #633806; --red: #A32D2D;
   }
-
-  body {
-    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background: var(--bg-tertiary);
-    color: var(--text-primary);
-    min-height: 100vh;
-    font-size: 15px;
-  }
-
+  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; font-size: 15px; }
   .app { display: flex; flex-direction: column; height: 100vh; min-height: 600px; }
-
-  .topbar {
-    background: var(--bg-primary);
-    border-bottom: 0.5px solid var(--border);
-    padding: 10px 16px;
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    flex-shrink: 0;
-  }
+  .topbar { background: var(--bg-primary); border-bottom: 0.5px solid var(--border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
   .topbar-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  .date-badge {
-    font-size: 12px; color: var(--text-secondary);
-    background: var(--bg-secondary); padding: 3px 8px;
-    border-radius: var(--radius-md);
-  }
-
-  .stats-bar {
-    background: var(--bg-primary);
-    border-bottom: 0.5px solid var(--border);
-    padding: 8px 16px;
-    display: grid;
-    grid-template-columns: repeat(4, minmax(0,1fr));
-    gap: 8px;
-    flex-shrink: 0;
-  }
+  .date-badge { font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); padding: 3px 8px; border-radius: var(--radius-md); }
+  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; margin-left: 4px; transition: background 0.3s; }
+  .sync-dot.connected { background: var(--green); }
+  .sync-dot.syncing { background: #EF9F27; }
+  .sync-dot.error { background: var(--red); }
+  .stats-bar { background: var(--bg-primary); border-bottom: 0.5px solid var(--border); padding: 8px 16px; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; flex-shrink: 0; }
   .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 8px 10px; }
   .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
   .stat-value { font-size: 18px; font-weight: 600; }
   .stat-value.green { color: var(--green); }
   .stat-value.blue { color: var(--blue); }
-
   .main { display: flex; flex: 1; overflow: hidden; }
-
-  .sidebar {
-    width: 340px; min-width: 280px;
-    background: var(--bg-primary);
-    border-right: 0.5px solid var(--border);
-    display: flex; flex-direction: column; overflow: hidden;
-  }
-
+  .sidebar { width: 340px; min-width: 280px; background: var(--bg-primary); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
   .sidebar-tabs { display: flex; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
-  .tab {
-    flex: 1; padding: 10px 4px;
-    font-size: 12px; font-weight: 600;
-    text-align: center; cursor: pointer;
-    color: var(--text-secondary);
-    border-bottom: 2px solid transparent;
-    background: none; border-top: none; border-left: none; border-right: none;
-    transition: color 0.15s;
-  }
+  .tab { flex: 1; padding: 10px 4px; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: color 0.15s; }
   .tab.active { color: var(--text-primary); border-bottom: 2px solid var(--blue); }
   .tab:hover { color: var(--text-primary); }
-
   .sidebar-content { flex: 1; overflow-y: auto; padding: 12px; }
-
   .form-group { margin-bottom: 10px; }
   .form-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.3px; }
-  .form-input {
-    width: 100%; padding: 8px 10px; font-size: 14px;
-    border: 0.5px solid var(--border-med);
-    border-radius: var(--radius-md);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: inherit;
-    -webkit-appearance: none;
-  }
+  .form-input { width: 100%; padding: 8px 10px; font-size: 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); font-family: inherit; -webkit-appearance: none; }
   .form-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.15); }
   select.form-input { cursor: pointer; }
   textarea.form-input { resize: vertical; min-height: 60px; }
   .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
   .form-actions { display: flex; gap: 8px; margin-top: 12px; }
-
-  .btn {
-    padding: 9px 14px; border-radius: var(--radius-md);
-    font-size: 13px; font-weight: 600; cursor: pointer;
-    border: 0.5px solid var(--border-med);
-    background: var(--bg-primary);
-    color: var(--text-primary);
-    font-family: inherit;
-    transition: background 0.15s;
-    -webkit-appearance: none;
-  }
+  .btn { padding: 9px 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; cursor: pointer; border: 0.5px solid var(--border-med); background: var(--bg-primary); color: var(--text-primary); font-family: inherit; transition: background 0.15s; -webkit-appearance: none; }
   .btn:hover { background: var(--bg-secondary); }
   .btn:active { transform: scale(0.98); }
   .btn-primary { background: var(--blue); color: white; border-color: var(--blue); }
@@ -135,14 +62,8 @@
   .btn-danger { background: var(--red); color: white; border-color: var(--red); font-size: 12px; padding: 7px 10px; }
   .btn-success { background: var(--green); color: white; border-color: var(--green); }
   .btn-success:hover { background: var(--green-dark); }
-
   .job-list { display: flex; flex-direction: column; gap: 8px; }
-  .job-card {
-    background: var(--bg-secondary); border-radius: var(--radius-md);
-    padding: 10px 12px; cursor: pointer;
-    border: 0.5px solid var(--border);
-    transition: border-color 0.15s;
-  }
+  .job-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; cursor: pointer; border: 0.5px solid var(--border); transition: border-color 0.15s; }
   .job-card:hover { border-color: var(--border-med); }
   .job-card.selected { border-color: var(--blue); background: var(--blue-light); }
   .job-card-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
@@ -153,31 +74,19 @@
   .badge-price { background: var(--blue-light); color: var(--blue-dark); }
   .badge-annual { background: var(--amber-light); color: var(--amber-dark); }
   .badge-today { background: var(--amber-light); color: var(--amber-dark); }
-
+  .badge-canvasser { background: #EEEDFE; color: #3C3489; }
   .map-area { flex: 1; position: relative; }
   #map { width: 100%; height: 100%; }
-  .map-btn {
-    position: absolute; bottom: 16px; right: 16px; z-index: 999;
-    background: var(--bg-primary); border: 0.5px solid var(--border-med);
-    box-shadow: 0 2px 8px rgba(0,0,0,0.15);
-  }
-
+  .map-btn { position: absolute; bottom: 16px; right: 16px; z-index: 999; background: var(--bg-primary); border: 0.5px solid var(--border-med); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
   .analytics-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
   .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
   .a-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px; }
   .a-card-label { font-size: 11px; color: var(--text-secondary); }
   .a-card-value { font-size: 16px; font-weight: 600; margin-top: 2px; }
   .divider { border: none; border-top: 0.5px solid var(--border); margin: 12px 0; }
-
   .empty-state { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 13px; }
-
   .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .detail-avatar {
-    width: 40px; height: 40px; border-radius: 50%;
-    background: var(--blue-light); display: flex; align-items: center;
-    justify-content: center; font-weight: 700; font-size: 13px;
-    color: var(--blue); flex-shrink: 0;
-  }
+  .detail-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--blue-light); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--blue); flex-shrink: 0; }
   .detail-name { font-size: 15px; font-weight: 600; }
   .detail-addr { font-size: 12px; color: var(--text-secondary); }
   .detail-table { width: 100%; font-size: 13px; border-collapse: collapse; }
@@ -185,25 +94,13 @@
   .detail-table td:first-child { color: var(--text-secondary); width: 90px; font-size: 12px; }
   .detail-table tr { border-bottom: 0.5px solid var(--border); }
   .detail-table tr:last-child { border-bottom: none; }
-
   .freq-hint { font-size: 11px; color: var(--blue); margin-top: 4px; min-height: 14px; }
-
-  .section-label {
-    font-size: 11px; font-weight: 600; color: var(--text-secondary);
-    margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px;
-  }
-
-  .toast {
-    position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%);
-    background: var(--green); color: white;
-    padding: 10px 20px; border-radius: var(--radius-md);
-    font-size: 13px; font-weight: 500; z-index: 9999;
-    opacity: 0; transition: opacity 0.25s; pointer-events: none;
-    white-space: nowrap;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-  }
+  .section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
+  .canvasser-setup { background: var(--blue-light); border: 0.5px solid var(--blue); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
+  .canvasser-setup p { font-size: 13px; color: var(--blue-dark); margin-bottom: 8px; font-weight: 500; }
+  .loading { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 13px; }
+  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--green); color: white; padding: 10px 20px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
   .toast.show { opacity: 1; }
-
   @media (max-width: 640px) {
     .main { flex-direction: column; }
     .sidebar { width: 100%; height: 55%; border-right: none; border-bottom: 0.5px solid var(--border); }
@@ -214,438 +111,433 @@
 </style>
 </head>
 <body>
-
 <div class="app">
-
-  <!-- Top bar -->
   <div class="topbar">
-    <div class="topbar-title">&#x1FA9F; WCC Local</div>
+    <div class="topbar-title">
+      &#x1FA9F; WCC Local
+      <span class="sync-dot" id="syncDot" title="Connecting..."></span>
+    </div>
     <div style="display:flex;gap:8px;align-items:center;">
       <span class="date-badge" id="todayLabel"></span>
       <button class="btn btn-success" onclick="exportCSV()">Export CSV</button>
     </div>
   </div>
-
-  <!-- Stats bar -->
   <div class="stats-bar">
-    <div class="stat">
-      <div class="stat-label">Jobs today</div>
-      <div class="stat-value blue" id="statToday">0</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Value today</div>
-      <div class="stat-value green" id="statTodayVal">£0.00</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Proj. monthly</div>
-      <div class="stat-value green" id="statMonthly">£0.00</div>
-    </div>
-    <div class="stat">
-      <div class="stat-label">Proj. annual</div>
-      <div class="stat-value green" id="statAnnual">£0.00</div>
-    </div>
+    <div class="stat"><div class="stat-label">Jobs today</div><div class="stat-value blue" id="statToday">0</div></div>
+    <div class="stat"><div class="stat-label">Value today</div><div class="stat-value green" id="statTodayVal">£0.00</div></div>
+    <div class="stat"><div class="stat-label">Proj. monthly</div><div class="stat-value green" id="statMonthly">£0.00</div></div>
+    <div class="stat"><div class="stat-label">Proj. annual</div><div class="stat-value green" id="statAnnual">£0.00</div></div>
   </div>
-
   <div class="main">
-
-    <!-- Sidebar -->
     <div class="sidebar">
       <div class="sidebar-tabs">
         <button class="tab active" onclick="switchTab('add',this)">Add job</button>
         <button class="tab" onclick="switchTab('list',this)">Job list</button>
         <button class="tab" onclick="switchTab('analytics',this)">Analytics</button>
       </div>
-      <div class="sidebar-content" id="tabContent"></div>
+      <div class="sidebar-content" id="tabContent"><div class="loading">Connecting to database...</div></div>
     </div>
-
-    <!-- Map -->
     <div class="map-area">
       <div id="map"></div>
       <button class="btn map-btn" onclick="locateMe()">&#x25CE; Locate me</button>
     </div>
-
   </div>
 </div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-// ─── Frequency definitions ──────────────────────────────────────────────────
-// All revenue calculated as: price × (52 / weeks) per year
+const SUPABASE_URL = 'https://gpjvqxoxkltrtdbbuqjh.supabase.co';
+const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwanZxeG94a2x0cnRkYmJ1cWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjc4MjMsImV4cCI6MjA5MTcwMzgyM30.oUpgF1oI83ux7zd9KFhxei49zR2g1Fz6kzGG7DM8QTM';
+const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+
 const FREQS = [
-  { value: '1w',  label: '1-weekly',  weeks: 1,    visitsPerYear: 52 },
-  { value: '2w',  label: '2-weekly',  weeks: 2,    visitsPerYear: 26 },
-  { value: '4w',  label: '4-weekly',  weeks: 4,    visitsPerYear: 13 },
-  { value: '6w',  label: '6-weekly',  weeks: 6,    visitsPerYear: 52/6 },
-  { value: '8w',  label: '8-weekly',  weeks: 8,    visitsPerYear: 52/8 },
-  { value: '12w', label: '12-weekly', weeks: 12,   visitsPerYear: 52/12 },
-  { value: '1off',label: 'One-off',   weeks: null, visitsPerYear: 0 }
+  { value:'1w',  label:'1-weekly',  weeks:1,    visitsPerYear:52 },
+  { value:'2w',  label:'2-weekly',  weeks:2,    visitsPerYear:26 },
+  { value:'4w',  label:'4-weekly',  weeks:4,    visitsPerYear:13 },
+  { value:'6w',  label:'6-weekly',  weeks:6,    visitsPerYear:52/6 },
+  { value:'8w',  label:'8-weekly',  weeks:8,    visitsPerYear:52/8 },
+  { value:'12w', label:'12-weekly', weeks:12,   visitsPerYear:52/12 },
+  { value:'1off',label:'One-off',   weeks:null, visitsPerYear:0 }
 ];
+function freqByValue(v) { return FREQS.find(f=>f.value===v)||FREQS[2]; }
+function annualValue(price,freqVal) { return (parseFloat(price)||0)*freqByValue(freqVal).visitsPerYear; }
+function monthlyValue(price,freqVal) { return annualValue(price,freqVal)/12; }
 
-function freqByValue(v) { return FREQS.find(f => f.value === v) || FREQS[2]; }
-
-function annualValue(price, freqVal) {
-  const f = freqByValue(freqVal);
-  return (parseFloat(price) || 0) * f.visitsPerYear;
-}
-function monthlyValue(price, freqVal) {
-  return annualValue(price, freqVal) / 12;
-}
-
-// ─── State ──────────────────────────────────────────────────────────────────
-const today     = new Date();
-const todayStr  = today.toISOString().split('T')[0];
-const STORE_KEY = 'wcc_local_jobs_v3';
-
-let jobs        = [];
-let map, markers = {};
-let selectedJob = null;
-let currentTab  = 'add';
-let editingId   = null;
+const today    = new Date();
+const todayStr = today.toISOString().split('T')[0];
+let jobs=[], map, markers={}, selectedJob=null, currentTab='add', editingId=null;
+let canvasserName = localStorage.getItem('wcc_canvasser')||'';
 
 document.getElementById('todayLabel').textContent =
-  today.toLocaleDateString('en-GB', { weekday:'short', day:'numeric', month:'short' });
+  today.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
 
-// ─── Persistence (localStorage for standalone use) ──────────────────────────
-function loadJobs() {
+function setSyncStatus(s) {
+  const d=document.getElementById('syncDot');
+  d.className='sync-dot '+s;
+  d.title=s==='connected'?'Connected – all data shared':s==='syncing'?'Saving...':'Connection error';
+}
+
+function dbToJob(d) {
+  return { id:d.id, name:d.name, address:d.address, postcode:d.postcode,
+    mobile:d.mobile||'', email:d.email||'', frequency:d.frequency,
+    price:d.price, notes:d.notes||'', dateAdded:d.date_added,
+    lat:d.lat, lng:d.lng, canvasser:d.canvasser||'' };
+}
+
+async function loadJobs() {
   try {
-    const raw = localStorage.getItem(STORE_KEY);
-    if (raw) jobs = JSON.parse(raw);
-  } catch(e) { jobs = []; }
+    setSyncStatus('syncing');
+    const {data,error} = await sb.from('jobs').select('*').order('created_at',{ascending:false});
+    if (error) throw error;
+    jobs=data.map(dbToJob);
+    setSyncStatus('connected');
+  } catch(e) {
+    setSyncStatus('error');
+    showToast('Could not connect to database');
+  }
   renderAll();
 }
 
-function saveJobs() {
-  try { localStorage.setItem(STORE_KEY, JSON.stringify(jobs)); } catch(e) {}
+async function saveJob(job) {
+  setSyncStatus('syncing');
+  try {
+    const {error} = await sb.from('jobs').upsert({
+      id:job.id, name:job.name, address:job.address, postcode:job.postcode,
+      mobile:job.mobile, email:job.email, frequency:job.frequency,
+      price:job.price, notes:job.notes, date_added:job.dateAdded,
+      lat:job.lat, lng:job.lng, canvasser:job.canvasser
+    });
+    if (error) throw error;
+    setSyncStatus('connected');
+  } catch(e) { setSyncStatus('error'); showToast('Save failed — check connection'); }
 }
 
-// ─── Helpers ─────────────────────────────────────────────────────────────────
-function genId() { return Date.now().toString(36) + Math.random().toString(36).slice(2,5); }
-function initials(name) { return name.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase() || '?'; }
+async function deleteJobFromDb(id) {
+  try {
+    const {error} = await sb.from('jobs').delete().eq('id',id);
+    if (error) throw error;
+    setSyncStatus('connected');
+  } catch(e) { setSyncStatus('error'); }
+}
 
+// Realtime — all phones update instantly when anyone adds a job
+sb.channel('jobs-changes')
+  .on('postgres_changes',{event:'*',schema:'public',table:'jobs'}, payload => {
+    if (payload.eventType==='INSERT'||payload.eventType==='UPDATE') {
+      const j=dbToJob(payload.new);
+      const idx=jobs.findIndex(x=>x.id===j.id);
+      if (idx>=0) jobs[idx]=j; else jobs.unshift(j);
+      if (markers[j.id]) { map.removeLayer(markers[j.id]); delete markers[j.id]; }
+    } else if (payload.eventType==='DELETE') {
+      jobs=jobs.filter(x=>x.id!==payload.old.id);
+      if (markers[payload.old.id]) { map.removeLayer(markers[payload.old.id]); delete markers[payload.old.id]; }
+    }
+    renderAll();
+  })
+  .subscribe();
+
+function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
+function initials(n) { return n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?'; }
+function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
 function showToast(msg) {
-  const t = document.getElementById('toast');
-  t.textContent = msg;
-  t.classList.add('show');
-  setTimeout(() => t.classList.remove('show'), 2500);
+  const t=document.getElementById('toast');
+  t.textContent=msg; t.classList.add('show');
+  setTimeout(()=>t.classList.remove('show'),2500);
 }
 
-// ─── Tabs ────────────────────────────────────────────────────────────────────
-function switchTab(tab, el) {
-  currentTab = tab;
-  document.querySelectorAll('.tab').forEach(t => t.classList.remove('active'));
+function switchTab(tab,el) {
+  currentTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
   el.classList.add('active');
   renderTab();
 }
-
 function renderAll() { updateStats(); renderTab(); renderMarkers(); }
 
-// ─── Stats bar ───────────────────────────────────────────────────────────────
 function updateStats() {
-  const todayJobs  = jobs.filter(j => j.dateAdded === todayStr);
-  const todayVal   = todayJobs.reduce((s,j) => s + (parseFloat(j.price)||0), 0);
-  const totalMonthly = jobs.reduce((s,j) => s + monthlyValue(j.price, j.frequency), 0);
-  const totalAnnual  = jobs.reduce((s,j) => s + annualValue(j.price, j.frequency), 0);
-
-  document.getElementById('statToday').textContent    = todayJobs.length;
-  document.getElementById('statTodayVal').textContent = '£' + todayVal.toFixed(2);
-  document.getElementById('statMonthly').textContent  = '£' + totalMonthly.toFixed(2);
-  document.getElementById('statAnnual').textContent   = '£' + totalAnnual.toFixed(2);
+  const tj=jobs.filter(j=>j.dateAdded===todayStr);
+  const tv=tj.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
+  const tm=jobs.reduce((s,j)=>s+monthlyValue(j.price,j.frequency),0);
+  const ta=jobs.reduce((s,j)=>s+annualValue(j.price,j.frequency),0);
+  document.getElementById('statToday').textContent=tj.length;
+  document.getElementById('statTodayVal').textContent='£'+tv.toFixed(2);
+  document.getElementById('statMonthly').textContent='£'+tm.toFixed(2);
+  document.getElementById('statAnnual').textContent='£'+ta.toFixed(2);
 }
 
-// ─── Tab router ──────────────────────────────────────────────────────────────
 function renderTab() {
-  const c = document.getElementById('tabContent');
-  if      (currentTab === 'add')       renderAddForm(c);
-  else if (currentTab === 'list')      renderList(c);
-  else                                 renderAnalytics(c);
+  const c=document.getElementById('tabContent');
+  if (currentTab==='add') renderAddForm(c);
+  else if (currentTab==='list') renderList(c);
+  else renderAnalytics(c);
 }
 
-// ─── Frequency options HTML ──────────────────────────────────────────────────
-function freqOptions(selected) {
-  return FREQS.map(f =>
-    `<option value="${f.value}" ${selected===f.value?'selected':''}>${f.label}</option>`
-  ).join('');
+function saveCanvasserName() {
+  const v=document.getElementById('canvasserInput').value.trim();
+  if (!v) { showToast('Please enter your name'); return; }
+  canvasserName=v;
+  localStorage.setItem('wcc_canvasser',v);
+  renderTab();
 }
 
-// ─── Add / Edit form ─────────────────────────────────────────────────────────
-function renderAddForm(c, prefill) {
-  const j = prefill || {};
-  const isEdit = !!editingId;
-  const selFreq = j.frequency || '4w';
+function freqOptions(sel) {
+  return FREQS.map(f=>`<option value="${f.value}" ${sel===f.value?'selected':''}>${f.label}</option>`).join('');
+}
 
-  c.innerHTML = `
-    <div class="form-group">
-      <label class="form-label">Full name *</label>
-      <input class="form-input" id="f_name" placeholder="Jane Smith" value="${esc(j.name||'')}">
-    </div>
-    <div class="form-group">
-      <label class="form-label">Address *</label>
-      <input class="form-input" id="f_address" placeholder="12 Oak Lane" value="${esc(j.address||'')}">
-    </div>
+function renderAddForm(c,prefill) {
+  const j=prefill||{};
+  const isEdit=!!editingId;
+  const selFreq=j.frequency||'4w';
+  let html='';
+  if (!canvasserName&&!isEdit) {
+    html+=`<div class="canvasser-setup">
+      <p>First, enter your name — it gets recorded with every job you add.</p>
+      <input class="form-input" id="canvasserInput" placeholder="Your name" style="margin-bottom:8px">
+      <button class="btn btn-primary" style="width:100%" onclick="saveCanvasserName()">Save my name</button>
+    </div>`;
+  }
+  html+=`
+    <div class="form-group"><label class="form-label">Full name *</label>
+      <input class="form-input" id="f_name" placeholder="Jane Smith" value="${esc(j.name)}"></div>
+    <div class="form-group"><label class="form-label">Address *</label>
+      <input class="form-input" id="f_address" placeholder="12 Oak Lane" value="${esc(j.address)}"></div>
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Postcode *</label>
-        <input class="form-input" id="f_postcode" placeholder="SW1A 1AA" value="${esc(j.postcode||'')}">
-      </div>
-      <div class="form-group">
-        <label class="form-label">Mobile</label>
-        <input class="form-input" id="f_mobile" placeholder="07700 900000" value="${esc(j.mobile||'')}">
-      </div>
+      <div class="form-group"><label class="form-label">Postcode *</label>
+        <input class="form-input" id="f_postcode" placeholder="HG1 1AA" value="${esc(j.postcode)}"></div>
+      <div class="form-group"><label class="form-label">Mobile</label>
+        <input class="form-input" id="f_mobile" placeholder="07700 900000" value="${esc(j.mobile)}"></div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Email</label>
-      <input class="form-input" id="f_email" type="email" placeholder="jane@example.com" value="${esc(j.email||'')}">
-    </div>
+    <div class="form-group"><label class="form-label">Email</label>
+      <input class="form-input" id="f_email" type="email" placeholder="jane@example.com" value="${esc(j.email)}"></div>
     <div class="form-row">
-      <div class="form-group">
-        <label class="form-label">Frequency *</label>
+      <div class="form-group"><label class="form-label">Frequency *</label>
         <select class="form-input" id="f_freq" onchange="updateFreqHint()">${freqOptions(selFreq)}</select>
-        <div class="freq-hint" id="freqHint"></div>
-      </div>
-      <div class="form-group">
-        <label class="form-label">Price per visit (£) *</label>
+        <div class="freq-hint" id="freqHint"></div></div>
+      <div class="form-group"><label class="form-label">Price per visit (£) *</label>
         <input class="form-input" id="f_price" type="number" step="0.50" min="0"
-          placeholder="0.00" value="${esc(j.price||'')}" oninput="updateFreqHint()">
-      </div>
+          placeholder="0.00" value="${esc(j.price)}" oninput="updateFreqHint()"></div>
     </div>
-    <div class="form-group">
-      <label class="form-label">Notes</label>
-      <textarea class="form-input" id="f_notes" placeholder="Access info, gate codes, dogs...">${esc(j.notes||'')}</textarea>
-    </div>
+    <div class="form-group"><label class="form-label">Notes</label>
+      <textarea class="form-input" id="f_notes" placeholder="Access info, gate codes, dogs...">${esc(j.notes)}</textarea></div>
     <div class="form-actions">
-      <button class="btn btn-primary" style="flex:1"
-        onclick="${isEdit?'saveEdit()':'addJob()'}">${isEdit?'Save changes':'Add job'}</button>
-      ${isEdit ? `<button class="btn" onclick="cancelEdit()">Cancel</button>` : ''}
-    </div>
-  `;
+      <button class="btn btn-primary" style="flex:1" onclick="${isEdit?'saveEdit()':'addJob()'}">${isEdit?'Save changes':'Add job'}</button>
+      ${isEdit?`<button class="btn" onclick="cancelEdit()">Cancel</button>`:''}
+    </div>`;
+  c.innerHTML=html;
   updateFreqHint();
 }
 
-function esc(s) { return String(s).replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-
 function updateFreqHint() {
-  const freqEl  = document.getElementById('f_freq');
-  const priceEl = document.getElementById('f_price');
-  const hint    = document.getElementById('freqHint');
-  if (!freqEl || !hint) return;
-  const f = freqByValue(freqEl.value);
-  const p = parseFloat(priceEl ? priceEl.value : 0) || 0;
-  if (!f.visitsPerYear) { hint.textContent = 'One-off — no recurring value'; return; }
-  const vpy = Math.round(f.visitsPerYear * 10) / 10;
-  if (p > 0) {
-    const ann = (p * f.visitsPerYear).toFixed(2);
-    const mon = (p * f.visitsPerYear / 12).toFixed(2);
-    hint.textContent = `${vpy} visits/yr · £${mon}/mo · £${ann}/yr`;
-  } else {
-    hint.textContent = `${vpy} visits/year`;
-  }
+  const fe=document.getElementById('f_freq');
+  const pe=document.getElementById('f_price');
+  const h=document.getElementById('freqHint');
+  if (!fe||!h) return;
+  const f=freqByValue(fe.value);
+  const p=parseFloat(pe?pe.value:0)||0;
+  if (!f.visitsPerYear) { h.textContent='One-off — no recurring value'; return; }
+  const vpy=Math.round(f.visitsPerYear*10)/10;
+  h.textContent=p>0?`${vpy} visits/yr · £${(p*f.visitsPerYear/12).toFixed(2)}/mo · £${(p*f.visitsPerYear).toFixed(2)}/yr`:`${vpy} visits/year`;
 }
 
 function getFormValues() {
   return {
-    name:      document.getElementById('f_name').value.trim(),
-    address:   document.getElementById('f_address').value.trim(),
-    postcode:  document.getElementById('f_postcode').value.trim().toUpperCase(),
-    mobile:    document.getElementById('f_mobile').value.trim(),
-    email:     document.getElementById('f_email').value.trim(),
-    frequency: document.getElementById('f_freq').value,
-    price:     parseFloat(document.getElementById('f_price').value||0).toFixed(2),
-    notes:     document.getElementById('f_notes').value.trim()
+    name:     document.getElementById('f_name').value.trim(),
+    address:  document.getElementById('f_address').value.trim(),
+    postcode: document.getElementById('f_postcode').value.trim().toUpperCase(),
+    mobile:   document.getElementById('f_mobile').value.trim(),
+    email:    document.getElementById('f_email').value.trim(),
+    frequency:document.getElementById('f_freq').value,
+    price:    parseFloat(document.getElementById('f_price').value||0).toFixed(2),
+    notes:    document.getElementById('f_notes').value.trim()
   };
 }
 
-function addJob() {
-  const v = getFormValues();
-  if (!v.name || !v.address || !v.postcode || parseFloat(v.price)===0) {
-    showToast('Please fill in all required fields'); return;
-  }
-  const job = { id: genId(), ...v, dateAdded: todayStr, lat: null, lng: null };
-  jobs.push(job);
-  saveJobs();
-  geocode(job);
+async function addJob() {
+  if (!canvasserName) { showToast('Please enter your name first'); return; }
+  const v=getFormValues();
+  if (!v.name||!v.address||!v.postcode||parseFloat(v.price)===0) { showToast('Please fill in all required fields'); return; }
+  const job={id:genId(),...v,dateAdded:todayStr,lat:null,lng:null,canvasser:canvasserName};
+  jobs.unshift(job);
   renderAll();
-  showToast('Job added: ' + v.name);
-  document.getElementById('f_name').value = '';
-  document.getElementById('f_address').value = '';
-  document.getElementById('f_postcode').value = '';
-  document.getElementById('f_mobile').value = '';
-  document.getElementById('f_email').value = '';
-  document.getElementById('f_price').value = '';
-  document.getElementById('f_notes').value = '';
+  await saveJob(job);
+  geocode(job);
+  showToast('Job added: '+v.name);
+  ['f_name','f_address','f_postcode','f_mobile','f_email','f_price','f_notes'].forEach(id=>{
+    const el=document.getElementById(id); if(el) el.value='';
+  });
   updateFreqHint();
 }
 
-function saveEdit() {
-  const j = jobs.find(x => x.id === editingId);
-  if (!j) return;
-  const v = getFormValues();
-  Object.assign(j, v);
-  editingId = null;
+async function saveEdit() {
+  const j=jobs.find(x=>x.id===editingId); if(!j) return;
+  Object.assign(j,getFormValues());
+  editingId=null;
   if (markers[j.id]) { map.removeLayer(markers[j.id]); delete markers[j.id]; }
-  saveJobs();
-  geocode(j);
   renderAll();
+  await saveJob(j);
+  geocode(j);
   showToast('Job updated');
 }
 
-function cancelEdit() { editingId = null; renderTab(); }
+function cancelEdit() { editingId=null; renderTab(); }
 
 function editJob(id) {
-  editingId = id;
-  const j = jobs.find(x => x.id === id);
-  currentTab = 'add';
-  document.querySelectorAll('.tab').forEach((t,i) => t.classList.toggle('active', i===0));
-  renderAddForm(document.getElementById('tabContent'), j);
+  editingId=id;
+  const j=jobs.find(x=>x.id===id);
+  currentTab='add';
+  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===0));
+  renderAddForm(document.getElementById('tabContent'),j);
 }
 
-function deleteJob(id) {
+async function deleteJob(id) {
   if (!confirm('Delete this job? This cannot be undone.')) return;
-  jobs = jobs.filter(j => j.id !== id);
+  jobs=jobs.filter(j=>j.id!==id);
   if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
-  saveJobs();
-  selectedJob = null;
+  selectedJob=null;
   renderAll();
+  await deleteJobFromDb(id);
   showToast('Job deleted');
 }
 
-// ─── Job list tab ─────────────────────────────────────────────────────────────
 function renderList(c) {
-  if (!jobs.length) {
-    c.innerHTML = '<div class="empty-state">No jobs yet.<br>Add your first one using the Add job tab.</div>';
-    return;
-  }
+  if (!jobs.length) { c.innerHTML='<div class="empty-state">No jobs yet.<br>Add your first one!</div>'; return; }
+  const sorted=[...jobs].sort((a,b)=>b.dateAdded.localeCompare(a.dateAdded));
+  const todayOnly=sorted.filter(j=>j.dateAdded===todayStr);
+  const rest=sorted.filter(j=>j.dateAdded!==todayStr);
+  let html='';
 
-  const sorted    = [...jobs].sort((a,b) => b.dateAdded.localeCompare(a.dateAdded));
-  const todayOnly = sorted.filter(j => j.dateAdded === todayStr);
-  const rest      = sorted.filter(j => j.dateAdded !== todayStr);
-  let html = '';
-
-  // Detail panel for selected job
   if (selectedJob) {
-    const j = jobs.find(x => x.id === selectedJob);
+    const j=jobs.find(x=>x.id===selectedJob);
     if (j) {
-      const f   = freqByValue(j.frequency);
-      const ann = annualValue(j.price, j.frequency).toFixed(2);
-      const mon = monthlyValue(j.price, j.frequency).toFixed(2);
-      const vpy = f.visitsPerYear ? Math.round(f.visitsPerYear*10)/10 : 'N/A';
-      html += `
-        <div style="background:var(--bg-primary);border:0.5px solid var(--border-med);border-radius:var(--radius-lg);padding:12px;margin-bottom:12px;">
-          <div class="detail-header">
-            <div class="detail-avatar">${initials(j.name)}</div>
-            <div>
-              <div class="detail-name">${j.name}</div>
-              <div class="detail-addr">${j.address}, ${j.postcode}</div>
-            </div>
-          </div>
-          <table class="detail-table">
-            ${j.mobile ? `<tr><td>Mobile</td><td><a href="tel:${j.mobile}" style="color:var(--blue)">${j.mobile}</a></td></tr>` : ''}
-            ${j.email  ? `<tr><td>Email</td><td style="word-break:break-all"><a href="mailto:${j.email}" style="color:var(--blue)">${j.email}</a></td></tr>` : ''}
-            <tr><td>Frequency</td><td>${f.label}</td></tr>
-            <tr><td>Visits/yr</td><td>${vpy}</td></tr>
-            <tr><td>Per visit</td><td>£${j.price}</td></tr>
-            <tr><td>Per month</td><td>£${mon}</td></tr>
-            <tr><td>Per year</td><td><strong>£${ann}</strong></td></tr>
-            <tr><td>Added</td><td>${new Date(j.dateAdded+'T12:00:00').toLocaleDateString('en-GB')}</td></tr>
-            ${j.notes ? `<tr><td>Notes</td><td>${j.notes}</td></tr>` : ''}
-          </table>
-          <div style="display:flex;gap:8px;margin-top:10px;">
-            <button class="btn" style="flex:1;font-size:12px" onclick="editJob('${j.id}')">Edit</button>
-            <button class="btn btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
-            <button class="btn" style="font-size:12px" onclick="selectedJob=null;renderTab()">Close</button>
-          </div>
-        </div>`;
+      const f=freqByValue(j.frequency);
+      const ann=annualValue(j.price,j.frequency).toFixed(2);
+      const mon=monthlyValue(j.price,j.frequency).toFixed(2);
+      const vpy=f.visitsPerYear?Math.round(f.visitsPerYear*10)/10:'N/A';
+      html+=`<div style="background:var(--bg-primary);border:0.5px solid var(--border-med);border-radius:var(--radius-lg);padding:12px;margin-bottom:12px;">
+        <div class="detail-header">
+          <div class="detail-avatar">${initials(j.name)}</div>
+          <div><div class="detail-name">${j.name}</div><div class="detail-addr">${j.address}, ${j.postcode}</div></div>
+        </div>
+        <table class="detail-table">
+          ${j.mobile?`<tr><td>Mobile</td><td><a href="tel:${j.mobile}" style="color:var(--blue)">${j.mobile}</a></td></tr>`:''}
+          ${j.email?`<tr><td>Email</td><td style="word-break:break-all">${j.email}</td></tr>`:''}
+          <tr><td>Frequency</td><td>${f.label}</td></tr>
+          <tr><td>Visits/yr</td><td>${vpy}</td></tr>
+          <tr><td>Per visit</td><td>£${j.price}</td></tr>
+          <tr><td>Per month</td><td>£${mon}</td></tr>
+          <tr><td>Per year</td><td><strong>£${ann}</strong></td></tr>
+          <tr><td>Added</td><td>${new Date(j.dateAdded+'T12:00:00').toLocaleDateString('en-GB')}</td></tr>
+          ${j.canvasser?`<tr><td>Canvasser</td><td>${j.canvasser}</td></tr>`:''}
+          ${j.notes?`<tr><td>Notes</td><td>${j.notes}</td></tr>`:''}
+        </table>
+        <div style="display:flex;gap:8px;margin-top:10px;">
+          <button class="btn" style="flex:1;font-size:12px" onclick="editJob('${j.id}')">Edit</button>
+          <button class="btn btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
+          <button class="btn" style="font-size:12px" onclick="selectedJob=null;renderTab()">Close</button>
+        </div>
+      </div>`;
     }
   }
 
   if (todayOnly.length) {
-    html += `<div class="section-label">Today</div><div class="job-list">`;
-    todayOnly.forEach(j => { html += jobCard(j, true); });
-    html += '</div>';
+    html+=`<div class="section-label">Today</div><div class="job-list">`;
+    todayOnly.forEach(j=>{html+=jobCard(j,true);}); html+='</div>';
   }
   if (rest.length) {
-    html += `<div class="section-label" style="margin-top:14px">Previous</div><div class="job-list">`;
-    rest.forEach(j => { html += jobCard(j, false); });
-    html += '</div>';
+    html+=`<div class="section-label" style="margin-top:14px">Previous</div><div class="job-list">`;
+    rest.forEach(j=>{html+=jobCard(j,false);}); html+='</div>';
   }
-  c.innerHTML = html;
+  c.innerHTML=html;
 }
 
-function jobCard(j, isToday) {
-  const f   = freqByValue(j.frequency);
-  const ann = annualValue(j.price, j.frequency).toFixed(0);
-  return `
-    <div class="job-card ${selectedJob===j.id?'selected':''}" onclick="selectJob('${j.id}')">
-      <div class="job-card-name">${j.name}</div>
-      <div class="job-card-addr">${j.address}, ${j.postcode}</div>
-      <div class="job-card-meta">
-        ${isToday ? '<span class="badge badge-today">Today</span>' : ''}
-        <span class="badge badge-freq">${f.label}</span>
-        <span class="badge badge-price">£${j.price}/visit</span>
-        ${f.visitsPerYear ? `<span class="badge badge-annual">£${ann}/yr</span>` : ''}
-      </div>
-    </div>`;
+function jobCard(j,isToday) {
+  const f=freqByValue(j.frequency);
+  const ann=annualValue(j.price,j.frequency).toFixed(0);
+  return `<div class="job-card ${selectedJob===j.id?'selected':''}" onclick="selectJob('${j.id}')">
+    <div class="job-card-name">${j.name}</div>
+    <div class="job-card-addr">${j.address}, ${j.postcode}</div>
+    <div class="job-card-meta">
+      ${isToday?'<span class="badge badge-today">Today</span>':''}
+      <span class="badge badge-freq">${f.label}</span>
+      <span class="badge badge-price">£${j.price}/visit</span>
+      ${f.visitsPerYear?`<span class="badge badge-annual">£${ann}/yr</span>`:''}
+      ${j.canvasser?`<span class="badge badge-canvasser">${j.canvasser}</span>`:''}
+    </div>
+  </div>`;
 }
 
 function selectJob(id) {
-  selectedJob = (selectedJob === id) ? null : id;
+  selectedJob=(selectedJob===id)?null:id;
   renderTab();
-  if (selectedJob && markers[id]) {
-    map.setView(markers[id].getLatLng(), 16);
-    markers[id].openPopup();
-  }
+  if (selectedJob&&markers[id]) { map.setView(markers[id].getLatLng(),16); markers[id].openPopup(); }
 }
 
-// ─── Analytics tab ────────────────────────────────────────────────────────────
 function renderAnalytics(c) {
-  const totalAnnual  = jobs.reduce((s,j) => s + annualValue(j.price, j.frequency), 0);
-  const totalMonthly = totalAnnual / 12;
-  const todayJobs    = jobs.filter(j => j.dateAdded === todayStr);
-  const todayVal     = todayJobs.reduce((s,j) => s + (parseFloat(j.price)||0), 0);
-  const avgPerVisit  = jobs.length
-    ? jobs.reduce((s,j)=>s+(parseFloat(j.price)||0),0)/jobs.length : 0;
+  const ta=jobs.reduce((s,j)=>s+annualValue(j.price,j.frequency),0);
+  const tm=ta/12;
+  const tj=jobs.filter(j=>j.dateAdded===todayStr);
+  const tv=tj.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
+  const avg=jobs.length?jobs.reduce((s,j)=>s+(parseFloat(j.price)||0),0)/jobs.length:0;
 
-  // Breakdown by frequency
-  const freqBreak = {};
-  FREQS.forEach(f => { freqBreak[f.value] = { count:0, annual:0, label:f.label }; });
-  jobs.forEach(j => {
-    if (!freqBreak[j.frequency]) freqBreak[j.frequency] = { count:0, annual:0, label:j.frequency };
-    freqBreak[j.frequency].count++;
-    freqBreak[j.frequency].annual += annualValue(j.price, j.frequency);
+  const fb={};
+  FREQS.forEach(f=>{fb[f.value]={count:0,annual:0,label:f.label};});
+  jobs.forEach(j=>{
+    if(!fb[j.frequency]) fb[j.frequency]={count:0,annual:0,label:j.frequency};
+    fb[j.frequency].count++; fb[j.frequency].annual+=annualValue(j.price,j.frequency);
   });
 
-  // Monthly canvass breakdown
-  const byMonth = {};
-  jobs.forEach(j => {
-    const m = j.dateAdded ? j.dateAdded.slice(0,7) : 'unknown';
-    if (!byMonth[m]) byMonth[m] = { count:0, annual:0 };
-    byMonth[m].count++;
-    byMonth[m].annual += annualValue(j.price, j.frequency);
+  const bc={};
+  jobs.forEach(j=>{
+    const k=j.canvasser||'Unknown';
+    if(!bc[k]) bc[k]={count:0,annual:0};
+    bc[k].count++; bc[k].annual+=annualValue(j.price,j.frequency);
   });
-  const months = Object.keys(byMonth).sort().reverse().slice(0,6);
-  const maxMA  = months.length ? Math.max(...months.map(x=>byMonth[x].annual)) : 1;
 
-  const activeFreqs = FREQS.filter(f => freqBreak[f.value] && freqBreak[f.value].count > 0);
+  const bm={};
+  jobs.forEach(j=>{
+    const m=j.dateAdded?j.dateAdded.slice(0,7):'unknown';
+    if(!bm[m]) bm[m]={count:0,annual:0};
+    bm[m].count++; bm[m].annual+=annualValue(j.price,j.frequency);
+  });
+  const months=Object.keys(bm).sort().reverse().slice(0,6);
+  const maxMA=months.length?Math.max(...months.map(x=>bm[x].annual)):1;
+  const activeFreqs=FREQS.filter(f=>fb[f.value]&&fb[f.value].count>0);
+  const canvassers=Object.keys(bc).sort((a,b)=>bc[b].annual-bc[a].annual);
 
-  let html = `
+  let html=`
     <div class="analytics-title">All-time totals</div>
     <div class="analytics-grid">
       <div class="a-card"><div class="a-card-label">Total customers</div><div class="a-card-value blue">${jobs.length}</div></div>
-      <div class="a-card"><div class="a-card-label">Avg per visit</div><div class="a-card-value">£${avgPerVisit.toFixed(2)}</div></div>
-      <div class="a-card"><div class="a-card-label">Proj. monthly</div><div class="a-card-value green">£${totalMonthly.toFixed(2)}</div></div>
-      <div class="a-card"><div class="a-card-label">Proj. annual</div><div class="a-card-value green">£${totalAnnual.toFixed(2)}</div></div>
+      <div class="a-card"><div class="a-card-label">Avg per visit</div><div class="a-card-value">£${avg.toFixed(2)}</div></div>
+      <div class="a-card"><div class="a-card-label">Proj. monthly</div><div class="a-card-value green">£${tm.toFixed(2)}</div></div>
+      <div class="a-card"><div class="a-card-label">Proj. annual</div><div class="a-card-value green">£${ta.toFixed(2)}</div></div>
     </div>
     <hr class="divider">
-    <div class="analytics-title">Today's canvass</div>
+    <div class="analytics-title">Today</div>
     <div class="analytics-grid">
-      <div class="a-card"><div class="a-card-label">Jobs signed</div><div class="a-card-value blue">${todayJobs.length}</div></div>
-      <div class="a-card"><div class="a-card-label">First clean value</div><div class="a-card-value green">£${todayVal.toFixed(2)}</div></div>
-    </div>
-    <hr class="divider">
-    <div class="analytics-title">By frequency</div>
-    ${activeFreqs.length ? activeFreqs.map(f => {
-      const b = freqBreak[f.value];
-      const pct = totalAnnual ? Math.min(100, (b.annual/totalAnnual)*100).toFixed(0) : 0;
+      <div class="a-card"><div class="a-card-label">Jobs signed</div><div class="a-card-value blue">${tj.length}</div></div>
+      <div class="a-card"><div class="a-card-label">First clean value</div><div class="a-card-value green">£${tv.toFixed(2)}</div></div>
+    </div>`;
+
+  if (canvassers.length>0) {
+    html+=`<hr class="divider"><div class="analytics-title">By canvasser</div>`;
+    canvassers.forEach(name=>{
+      const b=bc[name];
+      const pct=ta?Math.min(100,(b.annual/ta)*100).toFixed(0):0;
+      html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
+        <span style="font-size:12px;color:var(--text-secondary);width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
+        <span style="font-size:11px;color:var(--text-secondary);width:38px;text-align:right;">${b.count} job${b.count!==1?'s':''}</span>
+        <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:6px;overflow:hidden;">
+          <div style="width:${pct}%;height:6px;background:#7F77DD;border-radius:3px;"></div>
+        </div>
+        <span style="font-size:12px;font-weight:600;min-width:66px;text-align:right;">£${b.annual.toFixed(0)}/yr</span>
+      </div>`;
+    });
+  }
+
+  html+=`<hr class="divider"><div class="analytics-title">By frequency</div>
+    ${activeFreqs.length?activeFreqs.map(f=>{
+      const b=fb[f.value];
+      const pct=ta?Math.min(100,(b.annual/ta)*100).toFixed(0):0;
       return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
         <span style="font-size:12px;color:var(--text-secondary);width:72px;">${f.label}</span>
         <span style="font-size:11px;color:var(--text-secondary);width:38px;text-align:right;">${b.count} job${b.count!==1?'s':''}</span>
@@ -654,119 +546,97 @@ function renderAnalytics(c) {
         </div>
         <span style="font-size:12px;font-weight:600;min-width:66px;text-align:right;">£${b.annual.toFixed(0)}/yr</span>
       </div>`;
-    }).join('') : '<div class="empty-state" style="padding:10px 0">No data yet</div>'}
-    <hr class="divider">
-    <div class="analytics-title">By month canvassed</div>
-    ${months.length ? months.map(m => {
-      const pct = Math.min(100, (byMonth[m].annual/maxMA)*100).toFixed(0);
+    }).join(''):'<div class="empty-state" style="padding:10px 0">No data yet</div>'}
+    <hr class="divider"><div class="analytics-title">By month canvassed</div>
+    ${months.length?months.map(m=>{
+      const pct=Math.min(100,(bm[m].annual/maxMA)*100).toFixed(0);
       return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
         <span style="font-size:12px;color:var(--text-secondary);width:46px;">${new Date(m+'-15').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}</span>
         <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:6px;overflow:hidden;">
           <div style="width:${pct}%;height:6px;background:var(--green);border-radius:3px;"></div>
         </div>
-        <span style="font-size:12px;font-weight:600;min-width:70px;text-align:right;">£${byMonth[m].annual.toFixed(0)}/yr</span>
-        <span style="font-size:11px;color:var(--text-secondary);min-width:44px;text-align:right;">${byMonth[m].count} job${byMonth[m].count!==1?'s':''}</span>
+        <span style="font-size:12px;font-weight:600;min-width:70px;text-align:right;">£${bm[m].annual.toFixed(0)}/yr</span>
+        <span style="font-size:11px;color:var(--text-secondary);min-width:44px;text-align:right;">${bm[m].count} job${bm[m].count!==1?'s':''}</span>
       </div>`;
-    }).join('') : '<div class="empty-state" style="padding:10px 0">No data yet</div>'}
-  `;
-  c.innerHTML = html;
+    }).join(''):'<div class="empty-state" style="padding:10px 0">No data yet</div>'}`;
+  c.innerHTML=html;
 }
 
-// ─── Map ─────────────────────────────────────────────────────────────────────
 function initMap() {
-  map = L.map('map').setView([51.5074, -0.1278], 12);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png', {
-    attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains: 'abcd', maxZoom: 19
+  map=L.map('map').setView([53.9917,-1.5426],13);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
+    subdomains:'abcd',maxZoom:19
   }).addTo(map);
-  renderMarkers();
 }
 
 function renderMarkers() {
   if (!map) return;
-  jobs.forEach(j => {
-    if (j.lat && j.lng && !markers[j.id]) {
-      const isToday = j.dateAdded === todayStr;
-      const colour  = isToday ? '#185FA5' : '#0F6E56';
-      const icon = L.divIcon({
-        html: `<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${colour};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>`,
-        iconSize: [26,26], iconAnchor: [13,26], className: ''
+  jobs.forEach(j=>{
+    if (j.lat&&j.lng&&!markers[j.id]) {
+      const isToday=j.dateAdded===todayStr;
+      const colour=isToday?'#185FA5':'#0F6E56';
+      const icon=L.divIcon({
+        html:`<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${colour};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>`,
+        iconSize:[26,26],iconAnchor:[13,26],className:''
       });
-      const f   = freqByValue(j.frequency);
-      const ann = annualValue(j.price, j.frequency).toFixed(2);
-      const m   = L.marker([j.lat, j.lng], { icon }).addTo(map);
-      m.bindPopup(
-        `<strong>${j.name}</strong><br>${j.address}, ${j.postcode}<br>` +
-        `£${j.price}/visit &middot; ${f.label}<br><strong>£${ann}/year</strong>`
-      );
-      m.on('click', () => {
-        selectedJob = j.id;
-        if (currentTab === 'list') renderTab();
-        else {
-          currentTab = 'list';
-          document.querySelectorAll('.tab')[1].click();
-        }
+      const f=freqByValue(j.frequency);
+      const ann=annualValue(j.price,j.frequency).toFixed(2);
+      const m=L.marker([j.lat,j.lng],{icon}).addTo(map);
+      m.bindPopup(`<strong>${j.name}</strong><br>${j.address}, ${j.postcode}<br>£${j.price}/visit &middot; ${f.label}<br><strong>£${ann}/year</strong>${j.canvasser?'<br><em>Added by '+j.canvasser+'</em>':''}`);
+      m.on('click',()=>{
+        selectedJob=j.id;
+        if(currentTab==='list') renderTab();
+        else { currentTab='list'; document.querySelectorAll('.tab')[1].click(); }
       });
-      markers[j.id] = m;
+      markers[j.id]=m;
     }
   });
 }
 
 async function geocode(job) {
   try {
-    const q = encodeURIComponent(job.address + ', ' + job.postcode + ', UK');
-    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=1`);
-    const d = await r.json();
-    if (d && d.length) {
-      job.lat = parseFloat(d[0].lat);
-      job.lng = parseFloat(d[0].lon);
-      saveJobs();
+    const q=encodeURIComponent(job.address+', '+job.postcode+', UK');
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=1`);
+    const d=await r.json();
+    if (d&&d.length) {
+      job.lat=parseFloat(d[0].lat); job.lng=parseFloat(d[0].lon);
+      await saveJob(job);
       renderMarkers();
-      map.setView([job.lat, job.lng], 15);
+      map.setView([job.lat,job.lng],15);
     }
-  } catch(e) { /* geocode failed silently */ }
+  } catch(e){}
 }
 
 function locateMe() {
   if (!navigator.geolocation) { showToast('Geolocation not available'); return; }
   navigator.geolocation.getCurrentPosition(
-    p => map.setView([p.coords.latitude, p.coords.longitude], 15),
-    () => showToast('Could not get your location')
+    p=>map.setView([p.coords.latitude,p.coords.longitude],15),
+    ()=>showToast('Could not get your location')
   );
 }
 
-// ─── CSV Export ───────────────────────────────────────────────────────────────
 function exportCSV() {
   if (!jobs.length) { showToast('No jobs to export'); return; }
-  const headers = [
-    'Name','Address','Postcode','Mobile','Email',
-    'Frequency','Visits per year','Price per visit (£)',
-    'Annual value (£)','Monthly value (£)','Notes','Date added'
-  ];
-  const rows = jobs.map(j => {
-    const f   = freqByValue(j.frequency);
-    const vpy = f.visitsPerYear ? (Math.round(f.visitsPerYear*10)/10) : 0;
-    const ann = annualValue(j.price, j.frequency).toFixed(2);
-    const mon = monthlyValue(j.price, j.frequency).toFixed(2);
-    return [
-      j.name, j.address, j.postcode, j.mobile||'', j.email||'',
-      f.label, vpy, j.price, ann, mon, j.notes||'', j.dateAdded
-    ].map(v => `"${String(v).replace(/"/g,'""')}"`);
+  const headers=['Name','Address','Postcode','Mobile','Email','Frequency','Visits per year','Price per visit (£)','Annual value (£)','Monthly value (£)','Notes','Canvasser','Date added'];
+  const rows=jobs.map(j=>{
+    const f=freqByValue(j.frequency);
+    const vpy=f.visitsPerYear?Math.round(f.visitsPerYear*10)/10:0;
+    return [j.name,j.address,j.postcode,j.mobile||'',j.email||'',f.label,vpy,j.price,
+      annualValue(j.price,j.frequency).toFixed(2),monthlyValue(j.price,j.frequency).toFixed(2),
+      j.notes||'',j.canvasser||'',j.dateAdded].map(v=>`"${String(v).replace(/"/g,'""')}"`);
   });
-  const csv  = [headers.join(','), ...rows.map(r=>r.join(','))].join('\n');
-  const blob = new Blob(['\ufeff'+csv], { type: 'text/csv;charset=utf-8;' });
-  const a    = document.createElement('a');
-  a.href     = URL.createObjectURL(blob);
-  a.download = `wcc_local_jobs_${todayStr}.csv`;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
+  const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(blob);
+  a.download=`wcc_local_jobs_${todayStr}.csv`;
+  document.body.appendChild(a); a.click(); document.body.removeChild(a);
   showToast('CSV exported!');
 }
 
-// ─── Boot ─────────────────────────────────────────────────────────────────────
-loadJobs();
 initMap();
+loadJobs();
 </script>
 </body>
 </html>
