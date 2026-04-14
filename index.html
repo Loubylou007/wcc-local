@@ -3,1052 +3,845 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>RouteFlow — WCC</title>
+<title>WCC Local</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-title" content="RouteFlow">
-<meta name="theme-color" content="#0F172A">
+<meta name="apple-mobile-web-app-status-bar-style" content="default">
+<meta name="apple-mobile-web-app-title" content="WCC Local">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#185FA5">
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 *{box-sizing:border-box;margin:0;padding:0}
 :root{
-  --bg:#0F172A;--bg2:#1E293B;--bg3:#334155;--bg4:#475569;
-  --card:#1E293B;--card2:#263348;
-  --text:#F1F5F9;--text2:#94A3B8;--text3:#64748B;
-  --blue:#3B82F6;--blue2:#1D4ED8;--blue-light:#EFF6FF;
-  --green:#10B981;--green2:#065F46;
-  --amber:#F59E0B;--amber2:#78350F;
-  --red:#EF4444;--red2:#7F1D1D;
-  --purple:#8B5CF6;
-  --border:rgba(255,255,255,0.08);
-  --radius:10px;--radius-lg:14px;
+  --blue:#185FA5;--blue-l:#E6F1FB;--blue-d:#0C447C;
+  --green:#0F6E56;--green-l:#E1F5EE;--green-d:#085041;
+  --amber:#854F0B;--amber-l:#FAEEDA;
+  --red:#A32D2D;--red-l:#FCEBEB;
+  --purple:#3C3489;--purple-l:#EEEDFE;
+  --bg:#f5f5f4;--bg2:#eae9e6;
+  --text:#1a1a1a;--text2:#6b6b6b;--text3:#9ca3af;
+  --bdr:rgba(0,0,0,0.12);--bdr2:rgba(0,0,0,0.2);
+  --r:8px;--rl:12px;
 }
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+.app{display:flex;flex-direction:column;height:100vh}
+.topbar{background:#fff;border-bottom:0.5px solid var(--bdr);padding:0 14px;display:flex;align-items:center;height:48px;flex-shrink:0;gap:8px}
+.topbar-title{font-size:15px;font-weight:600;flex:1;display:flex;align-items:center;gap:7px}
+.sdot{width:7px;height:7px;border-radius:50%;background:#ccc}
+.sdot.ok{background:#10B981}.sdot.busy{background:#F59E0B}.sdot.err{background:#EF4444}
+.date-badge{font-size:11px;color:var(--text2);background:var(--bg);padding:3px 8px;border-radius:var(--r)}
+.stats{background:#fff;border-bottom:0.5px solid var(--bdr);padding:8px 14px;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:7px;flex-shrink:0}
+.stat{background:var(--bg);border-radius:var(--r);padding:7px 9px}
+.sl{font-size:10px;color:var(--text2);margin-bottom:1px}
+.sv{font-size:17px;font-weight:600}
+.sv.bl{color:var(--blue)}.sv.gn{color:var(--green)}.sv.am{color:var(--amber)}.sv.rd{color:var(--red)}
+.tabs{display:flex;background:#fff;border-bottom:0.5px solid var(--bdr);flex-shrink:0}
+.tab{flex:1;padding:10px 4px;font-size:11px;font-weight:600;text-align:center;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;background:none;border-top:none;border-left:none;border-right:none;font-family:inherit}
+.tab.on{color:var(--blue);border-bottom:2px solid var(--blue)}
+.main{display:flex;flex:1;overflow:hidden}
+.sidebar{width:340px;min-width:260px;background:#fff;border-right:0.5px solid var(--bdr);display:flex;flex-direction:column;overflow:hidden}
+.sb-body{flex:1;overflow-y:auto;padding:12px}
+.map-wrap{flex:1;position:relative}
+#map{width:100%;height:100%}
+.map-btn{position:absolute;bottom:16px;right:10px;z-index:999;background:#fff;border:0.5px solid var(--bdr2);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.map-legend{position:absolute;bottom:52px;left:10px;z-index:1000;background:#fff;border-radius:var(--rl);padding:10px;border:0.5px solid var(--bdr);font-size:11px;max-width:160px;box-shadow:0 2px 8px rgba(0,0,0,.1)}
+.ml-row{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+.ml-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0}
 
-/* Layout */
-.app{display:flex;height:100vh;overflow:hidden}
-.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
-.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
-.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0}
-.content{flex:1;overflow-y:auto;padding:20px}
+/* FORMS */
+.fg{margin-bottom:9px}
+.fl{font-size:10px;font-weight:700;color:var(--text2);margin-bottom:3px;display:block;text-transform:uppercase;letter-spacing:.3px}
+.fi{width:100%;padding:7px 9px;font-size:13px;border:0.5px solid var(--bdr2);border-radius:var(--r);background:#fff;color:var(--text);font-family:inherit;-webkit-appearance:none}
+.fi:focus{outline:none;border-color:var(--blue);box-shadow:0 0 0 3px rgba(24,95,165,.15)}
+select.fi{cursor:pointer}
+textarea.fi{resize:vertical;min-height:52px}
+.fr{display:grid;grid-template-columns:1fr 1fr;gap:7px}
+.fa{display:flex;gap:8px;margin-top:10px}
+.btn{padding:8px 13px;border-radius:var(--r);font-size:12px;font-weight:600;cursor:pointer;border:0.5px solid var(--bdr2);background:#fff;color:var(--text);font-family:inherit;-webkit-appearance:none}
+.btn:hover{background:var(--bg)}
+.btn-p{background:var(--blue);color:#fff;border-color:var(--blue)}.btn-p:hover{background:var(--blue-d)}
+.btn-g{background:var(--green);color:#fff;border-color:var(--green)}
+.btn-sm{padding:4px 9px;font-size:11px}
+.freq-hint{font-size:10px;color:var(--blue);margin-top:3px;min-height:12px}
 
-/* Sidebar */
-.sidebar-logo{padding:16px;border-bottom:1px solid var(--border)}
-.sidebar-logo h1{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
-.sidebar-logo p{font-size:11px;color:var(--text3);margin-top:1px}
-.nav-section{padding:12px 8px 4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
-.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all 0.15s;margin:1px 8px}
-.nav-item:hover{background:var(--bg3);color:var(--text)}
-.nav-item.active{background:var(--blue2);color:white}
-.nav-item .icon{font-size:15px;width:18px;text-align:center}
-.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid var(--border)}
-.operative-badge{background:var(--bg3);border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer}
-.operative-badge .label{color:var(--text3);font-size:10px;margin-bottom:2px}
-.operative-badge .name{color:var(--text);font-weight:600}
+/* ALERTS */
+.alert{border-radius:var(--rl);padding:10px 12px;margin-bottom:10px}
+.alert-amber{background:var(--amber-l);border:0.5px solid #EF9F27}
+.alert-blue{background:var(--blue-l);border:0.5px solid var(--blue)}
+.alert-green{background:var(--green-l);border:0.5px solid var(--green)}
+.alert-title{font-size:12px;font-weight:700;margin-bottom:3px;display:flex;align-items:center;gap:5px}
+.alert-amber .alert-title{color:var(--amber)}
+.alert-blue .alert-title{color:var(--blue-d)}
+.alert-green .alert-title{color:var(--green-d)}
+.alert-body{font-size:12px}
+.alert-amber .alert-body{color:#633806}
+.alert-blue .alert-body{color:var(--blue-d)}
+.alert-green .alert-body{color:var(--green-d)}
+.alert-link{font-size:11px;font-weight:600;text-decoration:underline;cursor:pointer;margin-top:5px;display:inline-block}
+.alert-amber .alert-link{color:var(--amber)}
 
-/* Topbar */
-.topbar-title{font-size:16px;font-weight:600;flex:1}
-.topbar-sub{font-size:12px;color:var(--text3)}
-.search-wrap{position:relative;flex:1;max-width:320px}
-.search-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 32px;font-size:13px;color:var(--text);font-family:inherit;outline:none}
-.search-input:focus{border-color:var(--blue)}
-.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px}
-.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0}
-.sync-dot.ok{background:var(--green)}
-.sync-dot.busy{background:var(--amber)}
-.sync-dot.err{background:var(--red)}
-.btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
-.btn:hover{background:var(--bg4)}
-.btn-primary{background:var(--blue);border-color:var(--blue);color:white}
-.btn-primary:hover{background:var(--blue2)}
-.btn-success{background:var(--green);border-color:var(--green);color:white}
-.btn-danger{background:var(--red);border-color:var(--red);color:white;font-size:11px;padding:5px 10px}
-.btn-sm{padding:4px 10px;font-size:11px}
+/* ROUND PROGRESS */
+.round-card{background:#fff;border-radius:var(--rl);border:0.5px solid var(--bdr);margin-bottom:8px;overflow:hidden}
+.rc-hdr{padding:9px 12px;display:flex;align-items:center;gap:8px;cursor:pointer}
+.rc-name{font-size:13px;font-weight:600;flex:1}
+.rc-val{font-size:12px;font-weight:600}
+.rc-bar-wrap{height:5px;background:var(--bg2);margin:0 12px 8px;border-radius:3px;overflow:hidden}
+.rc-bar{height:5px;border-radius:3px;transition:width .4s}
+.rc-detail{padding:0 12px 8px;font-size:11px;color:var(--text2)}
 
-/* Cards */
-.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
-.card-sm{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+/* JOB CARDS */
+.job-list{display:flex;flex-direction:column;gap:7px}
+.jc{background:var(--bg);border-radius:var(--r);padding:9px 11px;cursor:pointer;border:0.5px solid var(--bdr)}
+.jc:hover{border-color:var(--bdr2)}
+.jc.sel{border-color:var(--blue);background:var(--blue-l)}
+.jc-n{font-size:13px;font-weight:600;margin-bottom:1px}
+.jc-a{font-size:11px;color:var(--text2);margin-bottom:4px}
+.jc-m{display:flex;gap:5px;flex-wrap:wrap}
+.b{font-size:10px;padding:2px 6px;border-radius:20px;font-weight:600}
+.b-f{background:var(--green-l);color:var(--green-d)}
+.b-p{background:var(--blue-l);color:var(--blue-d)}
+.b-a{background:var(--amber-l);color:var(--amber)}
+.b-t{background:var(--amber-l);color:var(--amber)}
+.b-c{background:var(--purple-l);color:var(--purple)}
+.b-r{background:var(--blue-l);color:var(--blue-d);max-width:110px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
-/* Stats grid */
-.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
-.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
-.stat-label{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
-.stat-value{font-size:24px;font-weight:700}
-.stat-value.blue{color:var(--blue)}
-.stat-value.green{color:var(--green)}
-.stat-value.amber{color:var(--amber)}
-.stat-value.red{color:var(--red)}
-.stat-sub{font-size:11px;color:var(--text3);margin-top:2px}
+/* STREET ITEMS */
+.street-item{padding:8px 10px;border-radius:var(--r);margin-bottom:6px;cursor:pointer;border:0.5px solid var(--bdr)}
+.street-item.has-cust{border-color:var(--green);background:var(--green-l)}
+.street-item.partial{border-color:#EF9F27;background:var(--amber-l)}
+.street-item.fresh{border-color:var(--blue);background:var(--blue-l)}
+.si-n{font-size:12px;font-weight:600}
+.si-s{font-size:11px;color:var(--text2);margin-top:1px}
 
-/* Tables */
-.table-wrap{overflow-x:auto}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th{text-align:left;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap}
-td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
-tr:hover td{background:var(--bg3)}
-tr:last-child td{border-bottom:none}
-
-/* Badges */
-.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
-.badge-active{background:rgba(16,185,129,0.15);color:#34D399}
-.badge-inactive{background:rgba(100,116,139,0.2);color:#94A3B8}
-.badge-prospect{background:rgba(245,158,11,0.15);color:#FCD34D}
-.badge-round{background:rgba(59,130,246,0.15);color:#93C5FD;max-width:120px;overflow:hidden;text-overflow:ellipsis}
-.badge-op{background:rgba(139,92,246,0.15);color:#C4B5FD}
-.badge-freq{background:rgba(16,185,129,0.1);color:#6EE7B7}
-.badge-due{background:rgba(245,158,11,0.15);color:#FCD34D}
-.badge-overdue{background:rgba(239,68,68,0.15);color:#FCA5A5}
-.badge-balance{background:rgba(239,68,68,0.15);color:#FCA5A5}
-
-/* Round cards */
-.rounds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
-.round-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:all 0.15s}
-.round-card:hover{border-color:var(--blue);background:var(--card2)}
-.round-card-name{font-size:14px;font-weight:600;margin-bottom:4px}
-.round-card-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap}
-.round-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:2px}
-
-/* Job detail panel */
-.detail-panel{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--bg2);border-left:1px solid var(--border);z-index:100;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.25s ease}
-.detail-panel.open{transform:translateX(0)}
-.panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
-.panel-close{background:var(--bg3);border:none;color:var(--text2);font-size:16px;width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
-.panel-body{flex:1;overflow-y:auto;padding:20px}
-.panel-section{margin-bottom:20px}
-.panel-section-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px}
-.detail-row{display:flex;padding:7px 0;border-bottom:1px solid var(--border)}
-.detail-row:last-child{border-bottom:none}
-.detail-key{font-size:12px;color:var(--text3);width:110px;flex-shrink:0}
-.detail-val{font-size:12px;color:var(--text);flex:1;word-break:break-word}
-.panel-actions{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
-
-/* Map */
-.map-container{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)}
-#roundMap{height:340px;width:100%}
-
-/* Search results */
-.search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);z-index:200;max-height:320px;overflow-y:auto;margin-top:4px;display:none}
-.search-result-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
-.search-result-item:hover{background:var(--bg3)}
-.search-result-item:last-child{border-bottom:none}
-.sri-name{font-size:13px;font-weight:500}
-.sri-addr{font-size:11px;color:var(--text3)}
-.sri-meta{display:flex;gap:6px;margin-top:3px}
-
-/* Loading */
-.loading{text-align:center;padding:48px;color:var(--text3)}
-.loading-spin{display:inline-block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:8px}
-@keyframes spin{to{transform:rotate(360deg)}}
-
-/* Section header */
-.section-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
-.section-header h2{font-size:16px;font-weight:600;flex:1}
-
-/* Filter bar */
-.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
-.filter-btn{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;transition:all 0.15s;white-space:nowrap}
-.filter-btn.active{background:var(--blue);border-color:var(--blue);color:white}
-.filter-btn:hover{background:var(--bg3)}
-
-/* Split view */
-.split-view{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:calc(100vh - 160px)}
-.split-left{overflow-y:auto}
-.split-right{display:flex;flex-direction:column;gap:12px}
-
-/* Toast */
-.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.25s;pointer-events:none;white-space:nowrap}
+.sec-lbl{font-size:10px;font-weight:700;color:var(--text2);margin-bottom:5px;text-transform:uppercase;letter-spacing:.3px}
+.setup-box{background:var(--blue-l);border:0.5px solid var(--blue);border-radius:var(--rl);padding:14px;margin-bottom:10px}
+.setup-box p{font-size:13px;color:var(--blue-d);margin-bottom:7px;font-weight:500}
+.toast{position:fixed;bottom:20px;left:50%;transform:translateX(-50%);background:var(--green);color:#fff;padding:9px 18px;border-radius:var(--r);font-size:12px;font-weight:600;z-index:9999;opacity:0;transition:opacity .25s;pointer-events:none;white-space:nowrap;box-shadow:0 4px 12px rgba(0,0,0,.2)}
 .toast.show{opacity:1}
-.toast.error{background:var(--red)}
-
-/* Input */
-.form-input{width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:inherit;outline:none}
-.form-input:focus{border-color:var(--blue)}
-select.form-input{cursor:pointer}
-.form-label{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:0.3px}
-.form-group{margin-bottom:12px}
-.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
-
-/* Due indicator */
-.due-today{color:var(--amber);font-weight:600}
-.due-overdue{color:var(--red);font-weight:600}
-.due-future{color:var(--text3)}
-
-/* Responsive */
-@media(max-width:768px){
-  .sidebar{display:none}
-  .stats-grid{grid-template-columns:repeat(2,1fr)}
-  .split-view{grid-template-columns:1fr;height:auto}
-  .detail-panel{width:100%}
-  .rounds-grid{grid-template-columns:repeat(2,1fr)}
-}
+.toast.err{background:var(--red)}
+@media(max-width:640px){.main{flex-direction:column}.sidebar{width:100%;height:55%;border-right:none;border-bottom:0.5px solid var(--bdr)}.stats{grid-template-columns:repeat(2,1fr)}.sv{font-size:14px}}
 </style>
 </head>
 <body>
 <div class="app">
-
-  <!-- Sidebar -->
-  <div class="sidebar">
-    <div class="sidebar-logo">
-      <h1>RouteFlow</h1>
-      <p>WCC Window Cleaning</p>
-    </div>
-    <div class="nav-section">Main</div>
-    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</div>
-    <div class="nav-item" onclick="showPage('rounds',this)"><span class="icon">🗺️</span>Rounds</div>
-    <div class="nav-item" onclick="showPage('jobs',this)"><span class="icon">📋</span>All Jobs</div>
-    <div class="nav-item" onclick="showPage('customers',this)"><span class="icon">👥</span>Customers</div>
-    <div class="nav-section">Finance</div>
-    <div class="nav-item" onclick="showPage('payments',this)"><span class="icon">💷</span>Payments</div>
-    <div class="nav-item" onclick="showPage('balances',this)"><span class="icon">⚠️</span>Balances</div>
-    <div class="sidebar-bottom">
-      <div class="operative-badge" onclick="showPage('dashboard',document.querySelector('.nav-item'))">
-        <div class="label">Viewing as</div>
-        <div class="name" id="viewingAs">All operatives</div>
-      </div>
-    </div>
+  <div class="topbar">
+    <div class="topbar-title">🪟 WCC Local <span class="sdot" id="sd"></span></div>
+    <span class="date-badge" id="todayLbl"></span>
+    <button class="btn btn-g btn-sm" onclick="exportCSV()">Export CSV</button>
   </div>
-
-  <!-- Main area -->
+  <div class="stats">
+    <div class="stat"><div class="sl">Today's jobs</div><div class="sv bl" id="s1">0</div></div>
+    <div class="stat"><div class="sl">Today's value</div><div class="sv gn" id="s2">£0</div></div>
+    <div class="stat"><div class="sl">Proj. monthly</div><div class="sv gn" id="s3">£0</div></div>
+    <div class="stat"><div class="sl">Proj. annual</div><div class="sv gn" id="s4">£0</div></div>
+  </div>
+  <div class="tabs">
+    <button class="tab on" onclick="switchTab('add',this)">Add job</button>
+    <button class="tab" onclick="switchTab('canvass',this)">Canvass map</button>
+    <button class="tab" onclick="switchTab('rounds',this)">Rounds</button>
+    <button class="tab" onclick="switchTab('list',this)">Job list</button>
+  </div>
   <div class="main">
-    <div class="topbar">
-      <div class="topbar-title" id="pageTitle">Dashboard</div>
-      <div class="search-wrap">
-        <span class="search-icon">🔍</span>
-        <input class="search-input" id="globalSearch" placeholder="Search customers, addresses..." oninput="onSearch(this.value)" onblur="setTimeout(()=>hideSearch(),200)">
-        <div class="search-results" id="searchResults"></div>
-      </div>
-      <span class="sync-dot" id="syncDot" title="Connecting..."></span>
-      <span style="font-size:11px;color:var(--text3)" id="syncLabel">Connecting...</span>
-    </div>
-    <div class="content" id="pageContent">
-      <div class="loading"><div class="loading-spin"></div><br>Loading RouteFlow...</div>
+    <div class="sidebar"><div class="sb-body" id="tc"><div style="padding:20px;text-align:center;color:var(--text2)">Connecting...</div></div></div>
+    <div class="map-wrap">
+      <div id="map"></div>
+      <div class="map-legend" id="mapLegend"></div>
+      <button class="btn map-btn" onclick="locateMe()">📍 Locate me</button>
     </div>
   </div>
-
 </div>
-
-<!-- Detail panel -->
-<div class="detail-panel" id="detailPanel">
-  <div class="panel-header">
-    <button class="panel-close" onclick="closePanel()">✕</button>
-    <div style="flex:1">
-      <div style="font-size:15px;font-weight:600" id="panelTitle">Job Detail</div>
-      <div style="font-size:11px;color:var(--text3)" id="panelSub"></div>
-    </div>
-    <div id="panelStatus"></div>
-  </div>
-  <div class="panel-body" id="panelBody"></div>
-  <div class="panel-actions" id="panelActions"></div>
-</div>
-
 <div class="toast" id="toast"></div>
 
 <script>
-const SB_URL='https://gpjvqxoxkltrtdbbuqjh.supabase.co';
-const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwanZxeG94a2x0cnRkYmJ1cWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjc4MjMsImV4cCI6MjA5MTcwMzgyM30.oUpgF1oI83ux7zd9KFhxei49zR2g1Fz6kzGG7DM8QTM';
-const sb=supabase.createClient(SB_URL,SB_KEY);
+const SU='https://gpjvqxoxkltrtdbbuqjh.supabase.co';
+const SK='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwanZxeG94a2x0cnRkYmJ1cWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjc4MjMsImV4cCI6MjA5MTcwMzgyM30.oUpgF1oI83ux7zd9KFhxei49zR2g1Fz6kzGG7DM8QTM';
+const sb=supabase.createClient(SU,SK);
+const TARGET=450;
+const today=new Date(),todayStr=today.toISOString().split('T')[0];
+document.getElementById('todayLbl').textContent=today.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
 
-// State
-let allJobs=[], allCustomers=[], allRounds=[], allPayments=[];
-let currentPage='dashboard';
-let roundMap=null, roundMarkers=[];
+// ── TERRITORY DEFINITIONS
+// Jordan = operative NE, Jonny = canvasser NE
+// Adam = operative YK, Nick = canvasser YK
+const TERRITORIES={
+  'Jonny':{role:'canvasser',area:'NE',operative:'Jordan',
+    label:'North East',
+    description:'Durham · Darlington · Sunderland · Gateshead · South Shields · Teesside · Newcastle · Middlesbrough · Northallerton · Spennymoor',
+    centre:[54.78,-1.55],zoom:9,
+    postcodes:['DH','DL','SR','NE','TS'],
+    rounds:['Murton','Ferryhill/Chilton','Bowburn/Coxhoe','Middlestone',
+      'Sunderland/South Shields','Spennymoor','Boldon Colliery','Deckham',
+      'SunderLand','Wardley/Hebburn','Sherburn','FIRST CLEANS - NE']},
+  'Nick':{role:'canvasser',area:'YK',operative:'Adam',
+    label:'Yorkshire',
+    description:'Harrogate HG1-5 · York all YO · Boroughbridge YO51 · Ripon · Knaresborough · Thirsk',
+    centre:[54.0,-1.5],zoom:9,
+    postcodes:['HG','YO','LS'],
+    rounds:['Knaresborough','Knaresborough 2','Knaresborough 3','Starbeck',
+      'Jennifields 2','Jennifields 3','Jennyfield','Pannal','Acomb',
+      'Harrogate Town Centre','Ripon','York Centre','York/Tockwith',
+      'Poppleton','Thirsk/Oak Road','Thirsk/Millenium Green',
+      'Westgate','Eastgate','Commercial']}
+};
 
-const today=new Date();
-const todayStr=today.toISOString().split('T')[0];
+// ── ROUND DATA (from analysis of your actual jobs)
+const ROUND_DATA={
+  // NORTH EAST — Jordan operates, Jonny canvasses
+  'Murton':{daily:593,jobs:39,territory:'NE',full:true},
+  'Ferryhill/Chilton':{daily:427,jobs:31,territory:'NE',full:false},
+  'Bowburn/Coxhoe':{daily:389,jobs:26,territory:'NE',full:false},
+  'Middlestone':{daily:367,jobs:29,territory:'NE',full:false},
+  'Sunderland/South Shields':{daily:219,jobs:15,territory:'NE',full:false},
+  'Spennymoor':{daily:165,jobs:12,territory:'NE',full:false},
+  'Boldon Colliery':{daily:140,jobs:10,territory:'NE',full:false},
+  'Deckham':{daily:119,jobs:8,territory:'NE',full:false},
+  'SunderLand':{daily:77,jobs:8,territory:'NE',full:false},
+  'FIRST CLEANS - NE':{daily:78,jobs:7,territory:'NE',full:false},
+  'Wardley/Hebburn':{daily:29,jobs:2,territory:'NE',full:false},
+  'Sherburn':{daily:16,jobs:1,territory:'NE',full:false},
+  // YORKSHIRE — Adam operates, Nick canvasses
+  'Knaresborough':{daily:919,jobs:53,territory:'YK',full:true},
+  'Knaresborough 2':{daily:625,jobs:47,territory:'YK',full:true},
+  'Starbeck':{daily:906,jobs:59,territory:'YK',full:true},
+  'Pannal':{daily:501,jobs:13,territory:'YK',full:true},
+  'Commercial':{daily:940,jobs:6,territory:'YK',full:true},
+  'Knaresborough 3':{daily:422,jobs:26,territory:'YK',full:false},
+  'Jennifields 2':{daily:422,jobs:31,territory:'YK',full:false},
+  'Acomb':{daily:397,jobs:27,territory:'YK',full:false},
+  'Jennyfield':{daily:384,jobs:13,territory:'YK',full:false},
+  'Thirsk/Oak Road':{daily:319,jobs:26,territory:'YK',full:false},
+  'Harrogate Town Centre':{daily:314,jobs:17,territory:'YK',full:false},
+  'York/Tockwith':{daily:273,jobs:21,territory:'YK',full:false},
+  'Ripon':{daily:271,jobs:16,territory:'YK',full:false},
+  'Poppleton':{daily:269,jobs:20,territory:'YK',full:false},
+  'York Centre':{daily:231,jobs:18,territory:'YK',full:false},
+  'Jennifields 3':{daily:219,jobs:16,territory:'YK',full:false},
+  'Thirsk/Millenium Green':{daily:141,jobs:12,territory:'YK',full:false},
+  'Westgate':{daily:41,jobs:3,territory:'YK',full:false},
+  'Eastgate':{daily:121,jobs:5,territory:'YK',full:false}
+};
 
-// Operative colours
-const OP_COLOURS={'Nick Kennedy':'#3B82F6','Nick kennedy':'#3B82F6','Nick':'#3B82F6',
-  'Danny':'#10B981','danny':'#10B981',
-  'Jonny':'#F59E0B','Jonny Joe':'#F59E0B','Jonny andy':'#F59E0B','Jonny Andy':'#F59E0B','Jinny':'#F59E0B',
-  'Junior':'#8B5CF6',
-  'Jordan':'#EC4899',
-  'Austin':'#06B6D4','austin':'#06B6D4',
-  'Thierry':'#EF4444',
-  'Adam Steward':'#84CC16',
-  'Charlotte Hillas':'#F97316'};
+// ── POSTCODE → ROUND MAPPING
+const PC_ROUND={
+  // NE territory
+  'DH1':'Bowburn/Coxhoe','DH2':'Bowburn/Coxhoe','DH3':'Bowburn/Coxhoe',
+  'DH4':'Sunderland/South Shields','DH5':'Sunderland/South Shields',
+  'DH6':'Bowburn/Coxhoe','DH7':'Bowburn/Coxhoe','DH8':'Bowburn/Coxhoe','DH9':'Bowburn/Coxhoe',
+  'DL1':'Middlestone','DL2':'Middlestone','DL3':'Middlestone','DL4':'Spennymoor',
+  'DL5':'Middlestone','DL15':'Middlestone','DL16':'Spennymoor','DL17':'Ferryhill/Chilton',
+  'DL6':'Middlestone','DL7':'Middlestone',
+  'SR1':'SunderLand','SR2':'SunderLand','SR3':'SunderLand','SR4':'SunderLand',
+  'SR5':'SunderLand','SR6':'SunderLand','SR7':'Murton','SR8':'Murton',
+  'NE1':'Deckham','NE2':'Deckham','NE3':'Deckham','NE4':'Deckham',
+  'NE5':'Deckham','NE6':'Deckham','NE7':'Deckham','NE8':'Deckham',
+  'NE9':'Deckham','NE10':'Deckham','NE11':'Wardley/Hebburn',
+  'NE31':'Wardley/Hebburn','NE32':'Boldon Colliery','NE33':'Sunderland/South Shields',
+  'NE34':'Sunderland/South Shields','NE35':'Boldon Colliery','NE36':'Boldon Colliery',
+  'TS1':'Middlestone','TS2':'Middlestone','TS3':'Middlestone','TS4':'Middlestone',
+  'TS5':'Middlestone','TS6':'Middlestone','TS7':'Middlestone','TS8':'Middlestone',
+  'TS14':'Middlestone','TS15':'Middlestone','TS16':'Middlestone','TS17':'Middlestone',
+  'TS18':'Middlestone','TS19':'Middlestone','TS20':'Middlestone',
+  // YK territory
+  'HG1':'Starbeck','HG2':'Pannal','HG3':'Jennifields 2',
+  'HG4':'Ripon','HG5':'Knaresborough 3',
+  'YO1':'York Centre','YO7':'Thirsk/Millenium Green','YO8':'York Centre',
+  'YO10':'York Centre','YO19':'York/Tockwith',
+  'YO21':'Thirsk/Oak Road','YO22':'Thirsk/Oak Road',
+  'YO23':'York Centre','YO24':'Acomb','YO25':'York Centre',
+  'YO26':'Poppleton','YO30':'York Centre','YO31':'York Centre',
+  'YO32':'York Centre','YO41':'York/Tockwith','YO42':'York/Tockwith',
+  'YO43':'York/Tockwith','YO51':'Boroughbridge',
+  'YO60':'York Centre','YO61':'Thirsk/Oak Road','YO62':'Thirsk/Oak Road',
+  'LS22':'Commercial','LS23':'Commercial','LS24':'Commercial'
+};
 
-function opColour(name){
-  if(!name) return '#64748B';
-  const n=name.trim();
-  return OP_COLOURS[n]||'#64748B';
-}
+// Round colours
+const RC_COLS=['#e91e8c','#2196F3','#FF5722','#4CAF50','#9C27B0','#FF9800','#00BCD4',
+  '#F44336','#3F51B5','#8BC34A','#009688','#FFC107','#673AB7','#03A9F4',
+  '#795548','#607D8B','#FF6F00','#1565C0','#2E7D32','#AD1457','#6A1B9A',
+  '#00838F','#558B2F','#4527A0','#0277BD','#E65100','#37474F','#BF360C'];
+const CM={};let roundsList=[];
+function aRC(rounds){rounds.forEach((r,i)=>{CM[r.name]=RC_COLS[i%RC_COLS.length];});roundsList=rounds;}
+function rc(n){return CM[n]||'#94a3b8';}
 
-// ── Sync status
-function setSyncStatus(s,label){
-  const d=document.getElementById('syncDot');
-  const l=document.getElementById('syncLabel');
-  d.className='sync-dot '+s;
-  l.textContent=label||s;
-}
+const FREQS=[
+  {value:'1w',label:'1-weekly',vpy:52},
+  {value:'2w',label:'2-weekly',vpy:26},
+  {value:'4w',label:'4-weekly',vpy:13},
+  {value:'6w',label:'6-weekly',vpy:52/6},
+  {value:'8w',label:'8-weekly',vpy:52/8},
+  {value:'12w',label:'12-weekly',vpy:52/12},
+  {value:'1off',label:'One-off',vpy:0}
+];
+function fByVal(v){return FREQS.find(f=>f.value===v)||FREQS[2];}
+function annVal(p,f){return (parseFloat(p)||0)*(fByVal(f).vpy||0);}
+function monVal(p,f){return annVal(p,f)/12;}
 
-function showToast(msg,type='ok'){
-  const t=document.getElementById('toast');
-  t.textContent=msg;
-  t.className='toast show'+(type==='error'?' error':'');
-  setTimeout(()=>t.className='toast',2500);
-}
+let jobs=[],map,markers={},selJob=null,curTab='add',editId=null;
+let canvasserName=localStorage.getItem('wcc_canvasser')||'';
 
-function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
+function setSS(s){document.getElementById('sd').className='sdot '+s;}
+function toast(m,t='ok'){const e=document.getElementById('toast');e.textContent=m;e.className='toast show'+(t==='err'?' err':'');setTimeout(()=>e.className='toast',2500);}
+function gid(){return Date.now().toString(36)+Math.random().toString(36).slice(2,5);}
+function esc(s){return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;');}
 
-// ── Data loading
-async function loadAll(){
-  setSyncStatus('busy','Loading...');
+// ── Load
+async function loadData(){
+  setSS('busy');
   try{
-    const [jr,cr,rr,pr]=await Promise.all([
-      sb.from('jobs').select('*').order('customer_name'),
-      sb.from('customers').select('*').order('name'),
-      sb.from('rounds').select('*').order('name'),
-      sb.from('payments').select('*').order('payment_date',{ascending:false})
+    const[jr,rr]=await Promise.all([
+      sb.from('jobs').select('*').order('created_at',{ascending:false}),
+      sb.from('rounds').select('*').order('name')
     ]);
-    if(jr.error) throw jr.error;
-    if(cr.error) throw cr.error;
-    allJobs=jr.data||[];
-    allCustomers=cr.data||[];
-    allRounds=rr.data||[];
-    allPayments=pr.data||[];
-    setSyncStatus('ok',`${allJobs.length} jobs loaded`);
-    renderCurrentPage();
-  }catch(e){
-    setSyncStatus('err','Connection error');
-    showToast('Could not load data: '+e.message,'error');
+    if(jr.error)throw jr.error;
+    jobs=jr.data||[];
+    aRC(rr.data||[]);
+    setSS('ok');updateStats();renderTab();renderMarkers();buildLegend();
+  }catch(e){setSS('err');toast('Connection error','err');}
+}
+
+sb.channel('jobs-live').on('postgres_changes',{event:'*',schema:'public',table:'jobs'},p=>{
+  if(p.eventType==='INSERT') jobs.unshift(p.new);
+  else if(p.eventType==='UPDATE'){const i=jobs.findIndex(x=>x.id===p.new.id);if(i>=0)jobs[i]=p.new;else jobs.unshift(p.new);}
+  else if(p.eventType==='DELETE') jobs=jobs.filter(x=>x.id!==p.old.id);
+  updateStats();renderTab();renderMarkers();
+}).subscribe();
+
+function updateStats(){
+  const tj=jobs.filter(j=>j.date_added===todayStr);
+  const tv=tj.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
+  document.getElementById('s1').textContent=tj.length;
+  document.getElementById('s2').textContent='£'+tv.toFixed(2);
+  document.getElementById('s3').textContent='£'+jobs.reduce((s,j)=>s+monVal(j.price,j.frequency),0).toFixed(0);
+  document.getElementById('s4').textContent='£'+jobs.reduce((s,j)=>s+annVal(j.price,j.frequency),0).toFixed(0);
+}
+
+function switchTab(tab,el){
+  curTab=tab;
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('on'));
+  el.classList.add('on');renderTab();
+}
+function renderTab(){
+  const c=document.getElementById('tc');
+  if(curTab==='add') renderAdd(c);
+  else if(curTab==='canvass') renderCanvass(c);
+  else if(curTab==='rounds') renderRounds(c);
+  else renderList(c);
+}
+
+// ── HELPER: get canvasser's territory
+function getTerr(){
+  const n=canvasserName.trim();
+  if(!n) return null;
+  const first=n.split(' ')[0];
+  return TERRITORIES[first]||TERRITORIES[n]||null;
+}
+
+// ── HELPER: get live round values from DB jobs
+function getLiveRoundData(rounds){
+  const out={};
+  rounds.forEach(name=>{
+    const rj=jobs.filter(j=>j.round_name===name);
+    const daily=rj.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
+    const stored=ROUND_DATA[name]||{daily:0,jobs:0};
+    out[name]={
+      daily:rj.length>0?daily:stored.daily,
+      count:rj.length>0?rj.length:stored.jobs,
+      pct:Math.min(200,((rj.length>0?daily:stored.daily)/TARGET)*100)
+    };
+  });
+  return out;
+}
+
+// ── HELPER: get priority (nearest to £450 but not full)
+function getPriority(liveData){
+  return Object.entries(liveData)
+    .filter(([n,d])=>d.daily<TARGET)
+    .sort((a,b)=>b[1].daily-a[1].daily)[0];
+}
+
+// ── HELPER: next round number
+function nextNum(name){
+  const base=name.replace(/\s*\d+$/, '').trim();
+  const existing=Object.keys(ROUND_DATA).filter(r=>r.startsWith(base));
+  const nums=existing.map(r=>{const m=r.match(/(\d+)$/);return m?parseInt(m[1]):1;});
+  return Math.max(...nums,1)+1;
+}
+
+// ── ROUNDS TAB
+function renderRounds(c){
+  const terr=getTerr();
+  if(!terr){c.innerHTML=setupBox();return;}
+  const live=getLiveRoundData(terr.rounds);
+  const priority=getPriority(live);
+
+  let html=`<div class="alert alert-amber">
+    <div class="alert-title">🎯 ${terr.label} — canvassing priorities</div>
+    <div class="alert-body">${getPriorityMsg(live,priority)}</div>
+    <span class="alert-link" onclick="switchTab('canvass',document.querySelectorAll('.tab')[1])">→ Open smart canvass map</span>
+  </div>`;
+
+  // Sort: nearly full → building → starting → full (split needed)
+  const sorted=terr.rounds.map(name=>({name,...live[name]}))
+    .sort((a,b)=>{
+      if(a.daily>=TARGET&&b.daily<TARGET) return 1;
+      if(b.daily>=TARGET&&a.daily<TARGET) return -1;
+      return b.daily-a.daily;
+    });
+
+  sorted.forEach(r=>{
+    const full=r.daily>=TARGET;
+    const nearly=r.daily>=TARGET*0.85&&!full;
+    const col=full?'#10B981':nearly?'#F59E0B':'#185FA5';
+    const gap=Math.max(0,TARGET-r.daily);
+    const needed=Math.ceil(gap/15);
+    html+=`<div class="round-card">
+      <div class="rc-hdr" onclick="focusRound('${r.name}')">
+        <div style="width:10px;height:10px;border-radius:50%;background:${rc(r.name)};flex-shrink:0"></div>
+        <div class="rc-name">${r.name}</div>
+        <div class="rc-val" style="color:${col}">£${r.daily.toFixed(0)}/day</div>
+      </div>
+      <div class="rc-bar-wrap"><div class="rc-bar" style="width:${Math.min(100,r.pct)}%;background:${col}"></div></div>
+      <div class="rc-detail">
+        ${r.count} jobs · ${r.pct.toFixed(0)}% of £${TARGET} target ·
+        ${full?`✅ FULL — start <b>${r.name} ${nextNum(r.name)}</b>`:
+          nearly?`⚡ Nearly full — ${needed} more job${needed!==1?'s':''} needed`:
+          `needs £${gap.toFixed(0)} more (~${needed} jobs)`}
+      </div>
+    </div>`;
+  });
+
+  c.innerHTML=html;
+}
+
+function getPriorityMsg(live,priority){
+  const full=Object.entries(live).filter(([n,d])=>d.daily>=TARGET).map(([n])=>n);
+  if(full.length){
+    const splits=full.map(n=>`${n} ${nextNum(n)}`).join(', ');
+    return `${full.join(', ')} ${full.length>1?'are':'is'} full! Create: <b>${splits}</b>. ${priority?`Focus canvassing on <b>${priority[0]}</b> next.`:''}`;
+  }
+  if(priority){
+    const [name,data]=priority;
+    const gap=TARGET-data.daily;
+    return `Focus on <b>${name}</b> — £${data.daily.toFixed(0)}/£${TARGET} per day. Needs £${gap.toFixed(0)} more (≈${Math.ceil(gap/15)} jobs).`;
+  }
+  return 'All rounds building — keep canvassing!';
+}
+
+// ── CANVASS TAB
+function renderCanvass(c){
+  const terr=getTerr();
+  if(!terr){c.innerHTML=setupBox();return;}
+  const live=getLiveRoundData(terr.rounds);
+  const priority=getPriority(live);
+  const streets=getStreetSuggestions(priority?priority[0]:null,terr);
+
+  let html=`<div class="alert alert-blue">
+    <div class="alert-title">📍 ${terr.label} — ${terr.description}</div>
+    <div class="alert-body">Operative: <b>${terr.operative}</b></div>
+  </div>`;
+
+  if(priority){
+    const [name,data]=priority;
+    const gap=TARGET-data.daily;
+    html+=`<div class="alert alert-amber">
+      <div class="alert-title">🎯 Priority: ${name}</div>
+      <div class="alert-body">£${data.daily.toFixed(0)}/£${TARGET} per day · needs ${Math.ceil(gap/15)} more jobs at £15 avg<br>Every job you add here gets Jordan/Adam closer to a full day's work.</div>
+    </div>`;
+  }
+
+  html+=`<div style="background:#fff;border-radius:var(--rl);border:0.5px solid var(--bdr);margin-bottom:10px">
+    <div style="padding:9px 12px;font-size:12px;font-weight:600;border-bottom:0.5px solid var(--bdr);display:flex;justify-content:space-between;align-items:center">
+      <span>Streets to knock</span>
+      <button class="btn btn-sm" onclick="renderTab()">↻ Refresh</button>
+    </div>
+    <div style="padding:10px 12px">
+      <div style="font-size:11px;color:var(--text2);margin-bottom:8px">
+        🟢 Green = already have customers here (easy upsell)<br>
+        🟡 Amber = 1-2 customers (build the street)<br>
+        🔵 Blue = no customers yet (fresh territory)
+      </div>
+      ${streets.map(s=>`
+        <div class="street-item ${s.type}" onclick="focusStreet('${esc(s.name)}',${s.lat||0},${s.lng||0})">
+          <div class="si-n">${s.name}</div>
+          <div class="si-s">${s.existing>0?`✅ ${s.existing} existing customer${s.existing>1?'s':''} — ${s.round||''}`:s.type==='fresh'?'🆕 No customers yet — fresh opportunity':'Street with potential'}</div>
+        </div>`).join('')}
+      ${!streets.length?`<div style="text-align:center;padding:14px;color:var(--text2);font-size:12px">Zoom into the map to see nearby streets, or add a job to start building this area.</div>`:''}
+    </div>
+  </div>
+  <button class="btn btn-p" style="width:100%" onclick="switchTab('add',document.querySelectorAll('.tab')[0])">+ Add a new job</button>`;
+
+  c.innerHTML=html;
+
+  // Pan map to priority round
+  if(priority){
+    const rJobs=jobs.filter(j=>j.round_name===priority[0]&&j.lat&&j.lng);
+    if(rJobs.length&&map){
+      const lats=rJobs.map(j=>j.lat),lngs=rJobs.map(j=>j.lng);
+      map.setView([(Math.max(...lats)+Math.min(...lats))/2,(Math.max(...lngs)+Math.min(...lngs))/2],13);
+    } else if(map){
+      map.setView(terr.centre,terr.zoom);
+    }
   }
 }
 
-// ── Navigation
-function showPage(page,el){
-  currentPage=page;
-  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
-  if(el) el.classList.add('active');
-  closePanel();
-  renderCurrentPage();
+function getStreetSuggestions(roundName,terr){
+  if(!roundName) return [];
+  const rJobs=jobs.filter(j=>j.round_name===roundName);
+  const byStreet={};
+  rJobs.forEach(j=>{
+    const st=extractStreet(j.address);
+    if(!st) return;
+    if(!byStreet[st]){byStreet[st]={name:st,existing:0,lat:j.lat,lng:j.lng,round:j.round_name};}
+    byStreet[st].existing++;
+    if(j.lat) byStreet[st].lat=j.lat;
+    if(j.lng) byStreet[st].lng=j.lng;
+  });
+  return Object.values(byStreet)
+    .sort((a,b)=>b.existing-a.existing)
+    .map(s=>({...s,type:s.existing>=3?'has-cust':s.existing>=1?'partial':'fresh'}))
+    .slice(0,10);
 }
 
-function renderCurrentPage(){
-  const titles={dashboard:'Dashboard',rounds:'Rounds',jobs:'All Jobs',customers:'Customers',payments:'Payments',balances:'Outstanding Balances'};
-  document.getElementById('pageTitle').textContent=titles[currentPage]||currentPage;
-  const c=document.getElementById('pageContent');
-  if(currentPage==='dashboard') renderDashboard(c);
-  else if(currentPage==='rounds') renderRounds(c);
-  else if(currentPage==='jobs') renderJobsList(c);
-  else if(currentPage==='customers') renderCustomers(c);
-  else if(currentPage==='payments') renderPayments(c);
-  else if(currentPage==='balances') renderBalances(c);
+function extractStreet(addr){
+  if(!addr) return null;
+  const p=addr.split(',')[0].trim().replace(/^\d+[a-zA-Z]?\s+/,'');
+  return p.length>3?p:null;
 }
 
-// ── DASHBOARD
-function renderDashboard(c){
-  const active=allJobs.filter(j=>j.status==='active');
-  const todayJobs=allJobs.filter(j=>j.next_due===todayStr);
-  const overdue=allJobs.filter(j=>j.next_due&&j.next_due<todayStr&&j.status==='active');
-  const withBalance=allJobs.filter(j=>parseFloat(j.balance||0)>0);
-  const totalBalance=withBalance.reduce((s,j)=>s+(parseFloat(j.balance)||0),0);
-  const weeklyRev=active.reduce((s,j)=>s+weeklyValue(j.price,j.frequency),0);
-  const monthlyRev=weeklyRev*4.33;
-  const annualRev=weeklyRev*52;
-
-  // Jobs by operative
-  const byOp={};
-  active.forEach(j=>{
-    const ops=normaliseOp(j.assignee||j.source||'Unknown');
-    ops.forEach(op=>{
-      if(!byOp[op]) byOp[op]={count:0,monthly:0};
-      byOp[op].count++;
-      byOp[op].monthly+=weeklyValue(j.price,j.frequency)*4.33;
-    });
-  });
-  const opList=Object.entries(byOp).sort((a,b)=>b[1].monthly-a[1].monthly).slice(0,8);
-
-  // Jobs due this week
-  const weekEnd=new Date(today); weekEnd.setDate(today.getDate()+7);
-  const dueThisWeek=allJobs.filter(j=>{
-    if(!j.next_due||j.status!=='active') return false;
-    const d=new Date(j.next_due);
-    return d>=today && d<=weekEnd;
-  });
-
-  c.innerHTML=`
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="stat-label">Active jobs</div>
-        <div class="stat-value blue">${active.length}</div>
-        <div class="stat-sub">${allJobs.filter(j=>j.status==='inactive').length} inactive · ${allJobs.filter(j=>j.status==='prospect').length} prospects</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Monthly revenue</div>
-        <div class="stat-value green">£${monthlyRev.toFixed(0)}</div>
-        <div class="stat-sub">£${annualRev.toFixed(0)}/year projected</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Overdue jobs</div>
-        <div class="stat-value ${overdue.length>0?'red':'green'}">${overdue.length}</div>
-        <div class="stat-sub">${todayJobs.length} due today</div>
-      </div>
-      <div class="stat-card">
-        <div class="stat-label">Outstanding balance</div>
-        <div class="stat-value ${totalBalance>0?'amber':'green'}">£${totalBalance.toFixed(2)}</div>
-        <div class="stat-sub">${withBalance.length} customers owe money</div>
-      </div>
-    </div>
-
-    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
-      <div class="card">
-        <div class="section-header"><h2>By operative</h2></div>
-        ${opList.map(([op,data])=>`
-          <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
-            <div style="width:8px;height:8px;border-radius:50%;background:${opColour(op)};flex-shrink:0"></div>
-            <span style="font-size:13px;flex:1">${op}</span>
-            <span style="font-size:11px;color:var(--text3)">${data.count} jobs</span>
-            <span style="font-size:13px;font-weight:600;color:var(--green);min-width:70px;text-align:right">£${data.monthly.toFixed(0)}/mo</span>
-          </div>`).join('')}
-      </div>
-      <div class="card">
-        <div class="section-header"><h2>Due this week <span style="font-size:12px;color:var(--text3);font-weight:400">(${dueThisWeek.length} jobs)</span></h2></div>
-        <div style="max-height:260px;overflow-y:auto">
-          ${dueThisWeek.length?dueThisWeek.slice(0,20).map(j=>`
-            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openJobPanel('${j.id}')">
-              <div>
-                <div style="font-size:12px;font-weight:500">${j.customer_name}</div>
-                <div style="font-size:11px;color:var(--text3)">${shortAddr(j.address)}</div>
-              </div>
-              <div style="margin-left:auto;text-align:right">
-                <div class="badge ${dueClass(j.next_due)}">${fmtDate(j.next_due)}</div>
-                <div style="font-size:11px;color:var(--green);margin-top:2px">£${j.price}</div>
-              </div>
-            </div>`).join('')
-          :'<div style="color:var(--text3);font-size:13px;padding:16px 0;text-align:center">No jobs due this week</div>'}
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="section-header">
-        <h2>Recent activity</h2>
-        <button class="btn btn-sm" onclick="showPage('jobs',document.querySelectorAll('.nav-item')[2])">View all jobs</button>
-      </div>
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Customer</th><th>Address</th><th>Round</th><th>Assignee</th><th>Price</th><th>Frequency</th><th>Next due</th><th>Status</th></tr></thead>
-          <tbody>
-            ${allJobs.filter(j=>j.status==='active').slice(0,15).map(j=>`
-              <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
-                <td><span style="font-weight:500">${j.customer_name||'—'}</span></td>
-                <td style="color:var(--text3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(j.address)}</td>
-                <td><span class="badge badge-round">${j.round_name||'—'}</span></td>
-                <td><span style="font-size:11px;color:${opColour(firstOp(j.assignee))}">${firstOp(j.assignee)}</span></td>
-                <td style="font-weight:600;color:var(--green)">£${j.price||0}</td>
-                <td><span class="badge badge-freq">${freqLabel(j.frequency)}</span></td>
-                <td class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</td>
-                <td><span class="badge badge-${j.status}">${j.status}</span></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
+function focusStreet(name,lat,lng){
+  const matches=jobs.filter(j=>j.address&&j.address.toLowerCase().includes(name.toLowerCase()));
+  if(matches.length) toast(`${name}: ${matches.length} customer${matches.length!==1?'s':''} here`);
+  if(lat&&lng&&map) map.setView([lat,lng],17);
 }
 
-// ── ROUNDS
-function renderRounds(c){
-  const rounds=allRounds.sort((a,b)=>a.name.localeCompare(b.name));
-  const jobsByRound={};
-  allJobs.forEach(j=>{
-    const r=j.round_name||'Unknown';
-    if(!jobsByRound[r]) jobsByRound[r]={jobs:[],active:0,monthly:0};
-    jobsByRound[r].jobs.push(j);
-    if(j.status==='active'){
-      jobsByRound[r].active++;
-      jobsByRound[r].monthly+=weeklyValue(j.price,j.frequency)*4.33;
-    }
-  });
+function focusRound(name){
+  const rj=jobs.filter(j=>j.round_name===name&&j.lat&&j.lng);
+  if(!rj.length||!map) return;
+  if(rj.length>1) map.fitBounds(rj.map(j=>[j.lat,j.lng]),{padding:[30,30],maxZoom:14});
+  else map.setView([rj[0].lat,rj[0].lng],15);
+}
 
-  c.innerHTML=`
-    <div class="section-header">
-      <h2>All rounds <span style="font-size:13px;color:var(--text3);font-weight:400">(${rounds.length})</span></h2>
-    </div>
-    <div class="rounds-grid">
-      ${rounds.map(r=>{
-        const data=jobsByRound[r.name]||{active:0,monthly:0,jobs:[]};
-        return `<div class="round-card" onclick="openRound('${encodeURIComponent(r.name)}')">
-          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
-            <div class="round-dot" style="background:${r.colour||'#64748B'}"></div>
-            <div class="round-card-name">${r.name}</div>
-          </div>
-          <div class="round-card-meta">
-            <span>${data.active} active jobs</span>
-            <span style="color:var(--green)">£${data.monthly.toFixed(0)}/mo</span>
-          </div>
-          ${r.operative?`<div style="margin-top:6px"><span style="font-size:10px;color:${opColour(r.operative)}">${r.operative}</span></div>`:''}
+// ── ADD FORM
+function setupBox(){
+  return `<div class="setup-box"><p>Enter your name to get started — used to track your canvassing.</p>
+    <input class="fi" id="cnvIn" placeholder="Your name (Jonny or Nick)" style="margin-bottom:7px">
+    <button class="btn btn-p" style="width:100%" onclick="saveName()">Save name</button></div>`;
+}
+
+function saveName(){
+  const v=document.getElementById('cnvIn')?.value.trim();
+  if(!v){toast('Enter your name','err');return;}
+  canvasserName=v;localStorage.setItem('wcc_canvasser',v);renderTab();
+}
+
+function renderAdd(c,prefill){
+  const j=prefill||{};
+  const isEdit=!!editId;
+  let html='';
+  if(!canvasserName&&!isEdit){html+=setupBox();}
+
+  // Priority banner
+  if(canvasserName&&!isEdit){
+    const terr=getTerr();
+    if(terr){
+      const live=getLiveRoundData(terr.rounds);
+      const priority=getPriority(live);
+      if(priority){
+        const [name,data]=priority;
+        const gap=TARGET-data.daily;
+        html+=`<div class="alert alert-amber" style="margin-bottom:10px">
+          <div class="alert-title">🎯 Priority: ${name}</div>
+          <div class="alert-body">Needs £${gap.toFixed(0)} more (≈${Math.ceil(gap/15)} jobs). Add to this round first!</div>
         </div>`;
-      }).join('')}
+      }
+    }
+  }
+
+  html+=`
+    <div class="fg"><label class="fl">Customer name *</label>
+      <input class="fi" id="fn" placeholder="Jane Smith" value="${esc(j.customer_name)}"></div>
+    <div class="fg"><label class="fl">Address *</label>
+      <input class="fi" id="fa" placeholder="12 Oak Lane" value="${esc(j.address)}" oninput="chkStreet()"></div>
+    <div id="streetAlert" style="display:none;background:var(--green-l);border:0.5px solid var(--green);border-radius:var(--r);padding:7px 9px;font-size:11px;color:var(--green-d);margin-bottom:8px"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Postcode *</label>
+        <input class="fi" id="fp" placeholder="HG1 1AA" value="${esc(j.postcode)}" oninput="onPC()"></div>
+      <div class="fg"><label class="fl">Mobile</label>
+        <input class="fi" id="fm" placeholder="07700 900000" value="${esc(j.mobile)}"></div>
     </div>
-    <div id="roundDetail"></div>
-  `;
+    <div class="fg"><label class="fl">Email</label>
+      <input class="fi" id="fe" type="email" value="${esc(j.email)}"></div>
+    <div class="fr">
+      <div class="fg"><label class="fl">Frequency *</label>
+        <select class="fi" id="ff" onchange="updHint()">${FREQS.map(f=>`<option value="${f.value}" ${(j.frequency||'4w')===f.value?'selected':''}>${f.label}</option>`).join('')}</select>
+        <div class="freq-hint" id="fh"></div></div>
+      <div class="fg"><label class="fl">Price per visit (£) *</label>
+        <input class="fi" id="fpr" type="number" step="0.50" min="0" placeholder="0.00" value="${esc(j.price)}" oninput="updHint()"></div>
+    </div>
+    <div class="fg">
+      <label class="fl">Round <span id="rndHint" style="font-size:10px;color:var(--blue);font-weight:400"></span></label>
+      <select class="fi" id="frnd">
+        <option value="">— Auto-detect from postcode —</option>
+        ${getAllRounds().map(r=>`<option value="${r}" ${(j.round_name||'')==r?'selected':''}>${r}</option>`).join('')}
+      </select>
+    </div>
+    <div class="fg"><label class="fl">Notes</label>
+      <textarea class="fi" id="fno" placeholder="Access info, gate codes, dogs...">${esc(j.notes)}</textarea></div>
+    <div class="fa">
+      <button class="btn btn-p" style="flex:1" onclick="${isEdit?'saveEdit()':'addJob()'}">${isEdit?'Save changes':'Add job'}</button>
+      ${isEdit?`<button class="btn" onclick="cancelEdit()">Cancel</button>`:''}
+    </div>`;
+  c.innerHTML=html;updHint();
 }
 
-function openRound(nameEnc){
-  const name=decodeURIComponent(nameEnc);
-  const jobs=allJobs.filter(j=>j.round_name===name);
-  const active=jobs.filter(j=>j.status==='active');
-  const monthly=active.reduce((s,j)=>s+weeklyValue(j.price,j.frequency)*4.33,0);
-  const round=allRounds.find(r=>r.name===name)||{};
-
-  const el=document.getElementById('roundDetail');
-  if(!el) return;
-
-  el.innerHTML=`
-    <div class="section-header" style="margin-top:8px">
-      <h2>${name}</h2>
-      <span style="font-size:12px;color:var(--text3)">${active.length} active · £${monthly.toFixed(0)}/mo</span>
-    </div>
-    <div class="split-view">
-      <div class="split-left">
-        <div class="card-sm" style="margin-bottom:12px">
-          <table style="width:100%;font-size:13px;border-collapse:collapse">
-            <thead><tr><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Customer</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Address</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Price</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Next due</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Status</th></tr></thead>
-            <tbody>
-              ${jobs.map(j=>`
-                <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
-                  <td style="padding:7px 8px;border-bottom:1px solid var(--border);font-weight:500">${j.customer_name||'—'}</td>
-                  <td style="padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text3);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(j.address)}</td>
-                  <td style="padding:7px 8px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600">£${j.price||0}</td>
-                  <td style="padding:7px 8px;border-bottom:1px solid var(--border)" class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</td>
-                  <td style="padding:7px 8px;border-bottom:1px solid var(--border)"><span class="badge badge-${j.status}">${j.status}</span></td>
-                </tr>`).join('')}
-            </tbody>
-          </table>
-        </div>
-      </div>
-      <div class="split-right">
-        <div class="map-container"><div id="roundMap"></div></div>
-        <div class="card-sm">
-          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Round summary</div>
-          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Active</div><div style="font-size:18px;font-weight:700;color:var(--blue)">${active.length}</div></div>
-            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Monthly</div><div style="font-size:18px;font-weight:700;color:var(--green)">£${monthly.toFixed(0)}</div></div>
-            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Annual</div><div style="font-size:18px;font-weight:700;color:var(--green)">£${(monthly*12).toFixed(0)}</div></div>
-            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Inactive</div><div style="font-size:18px;font-weight:700;color:var(--text3)">${jobs.filter(j=>j.status==='inactive').length}</div></div>
-          </div>
-        </div>
-      </div>
-    </div>
-  `;
-
-  // Init map
-  setTimeout(()=>initRoundMap(jobs.filter(j=>j.lat&&j.lng)),100);
-  el.scrollIntoView({behavior:'smooth'});
+function getAllRounds(){
+  const fromDB=roundsList.map(r=>r.name);
+  const fromData=Object.keys(ROUND_DATA);
+  return[...new Set([...fromDB,...fromData])].sort();
 }
 
-function initRoundMap(jobs){
-  if(roundMap){roundMap.remove();roundMap=null;}
-  roundMap=L.map('roundMap').setView([54.0,-1.5],10);
+function updHint(){
+  const fe=document.getElementById('ff'),pe=document.getElementById('fpr'),h=document.getElementById('fh');
+  if(!fe||!h) return;
+  const f=fByVal(fe.value),p=parseFloat(pe?.value||0)||0;
+  if(!f.vpy){h.textContent='One-off';return;}
+  const vpy=Math.round(f.vpy*10)/10;
+  h.textContent=p>0?`${vpy}/yr · £${(p*f.vpy/12).toFixed(2)}/mo`:`${vpy} visits/year`;
+}
+
+function onPC(){
+  const pc=(document.getElementById('fp')?.value||'').trim().toUpperCase();
+  const re=document.getElementById('frnd'),rh=document.getElementById('rndHint');
+  if(!re||!rh) return;
+  const m=pc.match(/^([A-Z]{1,2}[0-9][0-9A-Z]?)/);
+  const sug=m?PC_ROUND[m[1]]:null;
+  if(sug){
+    re.value=sug;
+    // Check if full
+    const liveJobs=jobs.filter(j=>j.round_name===sug);
+    const liveDaily=liveJobs.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
+    const stored=ROUND_DATA[sug]?.daily||0;
+    const actual=liveJobs.length>0?liveDaily:stored;
+    if(actual>=TARGET){
+      const nn=nextNum(sug);
+      rh.textContent=`⚠️ ${sug} full — consider ${sug} ${nn}`;
+      rh.style.color='var(--amber)';
+    } else {
+      const pct=((actual/TARGET)*100).toFixed(0);
+      rh.textContent=`✓ ${sug} (${pct}% full)`;
+      rh.style.color='var(--green)';
+    }
+  } else {rh.textContent='';}
+}
+
+function chkStreet(){
+  const addr=(document.getElementById('fa')?.value||'').trim();
+  const el=document.getElementById('streetAlert');
+  if(!el||addr.length<5) return;
+  const st=addr.replace(/^\d+[a-zA-Z]?\s+/,'').toLowerCase().trim();
+  if(!st) return;
+  const matches=jobs.filter(j=>j.address&&j.address.toLowerCase().includes(st));
+  if(matches.length>0){
+    el.style.display='block';
+    el.innerHTML=`👥 We already have ${matches.length} customer${matches.length>1?'s':''} on this street: `+
+      matches.slice(0,3).map(j=>`<b>${j.customer_name}</b> (£${j.price})`).join(', ')+
+      (matches.length>3?` +${matches.length-3} more`:'');
+  } else {el.style.display='none';}
+}
+
+function getFormVals(){
+  return{
+    customer_name:document.getElementById('fn').value.trim(),
+    address:document.getElementById('fa').value.trim(),
+    postcode:document.getElementById('fp').value.trim().toUpperCase(),
+    mobile:document.getElementById('fm').value.trim(),
+    email:document.getElementById('fe').value.trim(),
+    frequency:document.getElementById('ff').value,
+    price:parseFloat(document.getElementById('fpr').value||0).toFixed(2),
+    notes:document.getElementById('fno').value.trim(),
+    round_name:document.getElementById('frnd')?.value||''
+  };
+}
+
+async function addJob(){
+  if(!canvasserName){toast('Enter your name first','err');return;}
+  const v=getFormVals();
+  if(!v.customer_name||!v.address||!v.postcode||parseFloat(v.price)===0){toast('Fill required fields','err');return;}
+  // Warn if round will be full
+  if(v.round_name){
+    const lj=jobs.filter(j=>j.round_name===v.round_name);
+    const ld=lj.reduce((s,j)=>s+(parseFloat(j.price)||0),0)+(parseFloat(v.price)||0);
+    const stored=ROUND_DATA[v.round_name]?.daily||0;
+    const actual=lj.length>0?ld:stored+(parseFloat(v.price)||0);
+    if(actual>=TARGET) toast(`${v.round_name} will hit £${TARGET}/day — consider starting ${v.round_name} ${nextNum(v.round_name)}`);
+  }
+  const job={id:gid(),...v,date_added:todayStr,lat:null,lng:null,canvasser:canvasserName};
+  jobs.unshift(job);updateStats();renderTab();
+  await sb.from('jobs').upsert(job);
+  geocode(job);
+  toast('Job added: '+v.customer_name);
+  ['fn','fa','fp','fm','fe','fpr','fno'].forEach(id=>{const el=document.getElementById(id);if(el)el.value='';});
+  updHint();
+}
+
+async function saveEdit(){
+  const j=jobs.find(x=>x.id===editId);if(!j)return;
+  const v=getFormVals();
+  Object.assign(j,v);editId=null;
+  if(markers[j.id]){map.removeLayer(markers[j.id]);delete markers[j.id];}
+  await sb.from('jobs').upsert(j);
+  geocode(j);updateStats();renderTab();toast('Updated');
+}
+
+function cancelEdit(){editId=null;renderTab();}
+
+function editJob(id){
+  editId=id;
+  const j=jobs.find(x=>x.id===id);
+  curTab='add';document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('on',i===0));
+  renderAdd(document.getElementById('tc'),j);
+}
+
+async function delJob(id){
+  if(!confirm('Delete this job?'))return;
+  jobs=jobs.filter(j=>j.id!==id);
+  if(markers[id]){map.removeLayer(markers[id]);delete markers[id];}
+  await sb.from('jobs').delete().eq('id',id);
+  selJob=null;updateStats();renderTab();toast('Deleted');
+}
+
+// ── JOB LIST
+function renderList(c){
+  if(!jobs.length){c.innerHTML='<div style="padding:24px;text-align:center;color:var(--text2)">No jobs yet</div>';return;}
+  const sorted=[...jobs].sort((a,b)=>(b.date_added||'').localeCompare(a.date_added||''));
+  const tdj=sorted.filter(j=>j.date_added===todayStr);
+  const rest=sorted.filter(j=>j.date_added!==todayStr);
+  let html='';
+  if(selJob){
+    const j=jobs.find(x=>x.id===selJob);
+    if(j){
+      const f=fByVal(j.frequency);
+      html+=`<div style="background:#fff;border:0.5px solid var(--bdr2);border-radius:var(--rl);padding:11px;margin-bottom:10px">
+        <div style="display:flex;align-items:center;gap:9px;margin-bottom:9px">
+          <div style="width:36px;height:36px;border-radius:50%;background:var(--blue-l);display:flex;align-items:center;justify-content:center;font-weight:700;font-size:12px;color:var(--blue);flex-shrink:0">${(j.customer_name||'?').split(' ').map(w=>w[0]).slice(0,2).join('').toUpperCase()}</div>
+          <div><div style="font-size:14px;font-weight:700">${j.customer_name}</div><div style="font-size:11px;color:var(--text2)">${j.address}</div></div>
+        </div>
+        <table style="width:100%;font-size:12px;border-collapse:collapse">
+          ${j.mobile?`<tr><td style="color:var(--text2);padding:4px 0;width:80px">Mobile</td><td><a href="tel:${j.mobile}" style="color:var(--blue)">${j.mobile}</a></td></tr>`:''}
+          ${j.email?`<tr><td style="color:var(--text2);padding:4px 0">Email</td><td style="font-size:11px">${j.email}</td></tr>`:''}
+          <tr><td style="color:var(--text2);padding:4px 0">Frequency</td><td>${f.label}</td></tr>
+          <tr><td style="color:var(--text2);padding:4px 0">Per visit</td><td style="font-weight:700;color:var(--green)">£${j.price}</td></tr>
+          <tr><td style="color:var(--text2);padding:4px 0">Monthly</td><td style="color:var(--green)">£${monVal(j.price,j.frequency).toFixed(2)}</td></tr>
+          <tr><td style="color:var(--text2);padding:4px 0">Annual</td><td style="color:var(--green)">£${annVal(j.price,j.frequency).toFixed(2)}</td></tr>
+          <tr><td style="color:var(--text2);padding:4px 0">Round</td><td>${j.round_name||'—'}</td></tr>
+          <tr><td style="color:var(--text2);padding:4px 0">Canvasser</td><td>${j.canvasser||'—'}</td></tr>
+          ${j.notes?`<tr><td style="color:var(--text2);padding:4px 0">Notes</td><td>${j.notes}</td></tr>`:''}
+        </table>
+        <div style="display:flex;gap:7px;margin-top:9px">
+          <button class="btn" style="flex:1;font-size:11px" onclick="editJob('${j.id}')">Edit</button>
+          <button class="btn" style="font-size:11px;background:var(--red-l);color:var(--red);border-color:var(--red)" onclick="delJob('${j.id}')">Delete</button>
+          <button class="btn btn-sm" onclick="selJob=null;renderTab()">✕</button>
+        </div>
+      </div>`;
+    }
+  }
+  if(tdj.length){html+=`<div class="sec-lbl">Today (${tdj.length})</div><div class="job-list">`;tdj.forEach(j=>html+=jCard(j,true));html+='</div>';}
+  if(rest.length){html+=`<div class="sec-lbl" style="margin-top:12px">Previous</div><div class="job-list">`;rest.forEach(j=>html+=jCard(j,false));html+='</div>';}
+  c.innerHTML=html;
+}
+
+function jCard(j,isToday){
+  const f=fByVal(j.frequency);
+  return `<div class="jc ${selJob===j.id?'sel':''}" onclick="selJ('${j.id}')">
+    <div class="jc-n">${j.customer_name||'—'}</div>
+    <div class="jc-a">${j.address}, ${j.postcode}</div>
+    <div class="jc-m">
+      ${isToday?'<span class="b b-t">Today</span>':''}
+      <span class="b b-f">${f.label}</span>
+      <span class="b b-p">£${j.price}/visit</span>
+      ${f.vpy?`<span class="b b-a">£${annVal(j.price,j.frequency).toFixed(0)}/yr</span>`:''}
+      ${j.round_name?`<span class="b b-r">${j.round_name}</span>`:''}
+      ${j.canvasser?`<span class="b b-c">${j.canvasser}</span>`:''}
+    </div>
+  </div>`;
+}
+
+function selJ(id){
+  selJob=(selJob===id)?null:id;renderTab();
+  if(selJob&&markers[id]){map.setView(markers[id].getLatLng(),16);markers[id].openPopup();}
+}
+
+// ── MAP
+function initMap(){
+  map=L.map('map').setView([54.0,-1.5],9);
   L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
     attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
-  }).addTo(roundMap);
+  }).addTo(map);
+}
 
-  if(!jobs.length){roundMap.setView([54.0,-1.5],8);return;}
-
-  const bounds=[];
+function renderMarkers(){
+  if(!map) return;
   jobs.forEach(j=>{
-    const colour=j.status==='active'?'#10B981':'#64748B';
-    const icon=L.divIcon({
-      html:`<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${colour};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.4)"></div>`,
-      iconSize:[22,22],iconAnchor:[11,22],className:''
-    });
-    const m=L.marker([j.lat,j.lng],{icon}).addTo(roundMap);
-    m.bindPopup(`<b>${j.customer_name}</b><br>${j.address}<br>£${j.price} · ${freqLabel(j.frequency)}`);
-    bounds.push([j.lat,j.lng]);
+    if(j.lat&&j.lng&&!markers[j.id]){
+      const isToday=j.date_added===todayStr;
+      const col=j.round_name?rc(j.round_name):(isToday?'#185FA5':'#0F6E56');
+      const ic=L.divIcon({html:`<div style="width:22px;height:28px"><div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${col};transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 2px 5px rgba(0,0,0,.3)"></div></div>`,iconSize:[22,28],iconAnchor:[11,28],className:''});
+      const m=L.marker([j.lat,j.lng],{icon:ic}).addTo(map);
+      m.bindPopup(`<b>${j.customer_name}</b><br>${j.address}<br>£${j.price}/visit · ${fByVal(j.frequency).label}<br><small>${j.round_name||'No round'} · Added by ${j.canvasser||'?'}</small>`);
+      m.on('click',()=>{selJob=j.id;if(curTab==='list')renderTab();else{curTab='list';document.querySelectorAll('.tab')[3].click();}});
+      markers[j.id]=m;
+    }
   });
-  if(bounds.length) roundMap.fitBounds(bounds,{padding:[20,20]});
 }
 
-// ── ALL JOBS
-let jobsFilter='all';
-function renderJobsList(c){
-  let filtered=allJobs;
-  if(jobsFilter!=='all') filtered=allJobs.filter(j=>j.status===jobsFilter);
-
-  c.innerHTML=`
-    <div class="section-header">
-      <h2>All jobs <span style="font-size:13px;color:var(--text3);font-weight:400">(${filtered.length})</span></h2>
-      <button class="btn btn-primary btn-sm" onclick="openAddJobPanel()">+ Add job</button>
-    </div>
-    <div class="filter-bar">
-      <button class="filter-btn ${jobsFilter==='all'?'active':''}" onclick="setJobsFilter('all',this)">All (${allJobs.length})</button>
-      <button class="filter-btn ${jobsFilter==='active'?'active':''}" onclick="setJobsFilter('active',this)">Active (${allJobs.filter(j=>j.status==='active').length})</button>
-      <button class="filter-btn ${jobsFilter==='inactive'?'active':''}" onclick="setJobsFilter('inactive',this)">Inactive (${allJobs.filter(j=>j.status==='inactive').length})</button>
-      <button class="filter-btn ${jobsFilter==='prospect'?'active':''}" onclick="setJobsFilter('prospect',this)">Prospects (${allJobs.filter(j=>j.status==='prospect').length})</button>
-    </div>
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Customer</th><th>Address</th><th>Round</th><th>Assignee</th><th>Price</th><th>Frequency</th><th>Last done</th><th>Next due</th><th>Balance</th><th>Status</th></tr></thead>
-          <tbody>
-            ${filtered.map(j=>`
-              <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
-                <td style="font-weight:500;white-space:nowrap">${j.customer_name||'—'}</td>
-                <td style="color:var(--text3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${shortAddr(j.address)}</td>
-                <td><span class="badge badge-round">${j.round_name||'—'}</span></td>
-                <td><span style="font-size:11px;color:${opColour(firstOp(j.assignee))}">${firstOp(j.assignee)}</span></td>
-                <td style="font-weight:600;color:var(--green)">£${j.price||0}</td>
-                <td><span class="badge badge-freq">${freqLabel(j.frequency)}</span></td>
-                <td style="color:var(--text3);font-size:12px">${fmtDate(j.last_done)}</td>
-                <td class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</td>
-                <td>${parseFloat(j.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(j.balance).toFixed(2)}</span>`:'—'}</td>
-                <td><span class="badge badge-${j.status}">${j.status}</span></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
+function buildLegend(){
+  const el=document.getElementById('mapLegend');if(!el) return;
+  const activeRounds=[...new Set(jobs.filter(j=>j.round_name).map(j=>j.round_name))].slice(0,8);
+  el.innerHTML=`<div style="font-size:10px;font-weight:700;color:var(--text2);margin-bottom:5px">Rounds</div>`+
+    activeRounds.map(r=>`<div class="ml-row"><div class="ml-dot" style="background:${rc(r)}"></div><span style="font-size:10px">${r}</span></div>`).join('');
 }
 
-function setJobsFilter(f,el){
-  jobsFilter=f;
-  renderJobsList(document.getElementById('pageContent'));
-}
-
-// ── CUSTOMERS
-function renderCustomers(c){
-  c.innerHTML=`
-    <div class="section-header">
-      <h2>Customers <span style="font-size:13px;color:var(--text3);font-weight:400">(${allCustomers.length})</span></h2>
-    </div>
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Name</th><th>Address</th><th>Phone</th><th>Email</th><th>Balance</th><th>Status</th><th>Jobs</th></tr></thead>
-          <tbody>
-            ${allCustomers.map(cu=>{
-              const custJobs=allJobs.filter(j=>j.customer_id===cu.id);
-              return `<tr style="cursor:pointer" onclick="openCustomerPanel('${cu.id}')">
-                <td style="font-weight:500">${cu.name||'—'}</td>
-                <td style="color:var(--text3);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(cu.address)}</td>
-                <td style="color:var(--text3);font-size:12px">${cu.phone||'—'}</td>
-                <td style="color:var(--text3);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cu.email||'—'}</td>
-                <td>${parseFloat(cu.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(cu.balance).toFixed(2)}</span>`:'—'}</td>
-                <td><span class="badge badge-${cu.status||'active'}">${cu.status||'active'}</span></td>
-                <td style="color:var(--text3)">${custJobs.length}</td>
-              </tr>`;
-            }).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-// ── PAYMENTS
-function renderPayments(c){
-  c.innerHTML=`
-    <div class="section-header">
-      <h2>Payments <span style="font-size:13px;color:var(--text3);font-weight:400">(${allPayments.length})</span></h2>
-      <button class="btn btn-primary btn-sm" onclick="openAddPaymentPanel()">+ Record payment</button>
-    </div>
-    ${allPayments.length?`
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>
-          <tbody>
-            ${allPayments.map(p=>`
-              <tr>
-                <td style="color:var(--text3);font-size:12px">${fmtDate(p.payment_date)}</td>
-                <td>${p.customer_id||'—'}</td>
-                <td style="font-weight:600;color:var(--green)">£${parseFloat(p.amount||0).toFixed(2)}</td>
-                <td><span class="badge badge-freq">${p.method||'—'}</span></td>
-                <td style="color:var(--text3);font-size:12px">${p.notes||'—'}</td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>`:`
-    <div class="card">
-      <div style="text-align:center;padding:32px;color:var(--text3)">No payments recorded yet.<br><br>
-        <button class="btn btn-primary" onclick="openAddPaymentPanel()">Record first payment</button>
-      </div>
-    </div>`}
-  `;
-}
-
-// ── BALANCES
-function renderBalances(c){
-  const withBalance=allJobs.filter(j=>parseFloat(j.balance||0)>0).sort((a,b)=>parseFloat(b.balance)-parseFloat(a.balance));
-  const total=withBalance.reduce((s,j)=>s+(parseFloat(j.balance)||0),0);
-  c.innerHTML=`
-    <div class="section-header">
-      <h2>Outstanding balances</h2>
-      <span style="font-size:13px;color:var(--amber);font-weight:600">Total: £${total.toFixed(2)}</span>
-    </div>
-    <div class="card" style="padding:0">
-      <div class="table-wrap">
-        <table>
-          <thead><tr><th>Customer</th><th>Address</th><th>Round</th><th>Balance</th><th>Phone</th><th>Email</th><th>Action</th></tr></thead>
-          <tbody>
-            ${withBalance.map(j=>`
-              <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
-                <td style="font-weight:500">${j.customer_name||'—'}</td>
-                <td style="color:var(--text3);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(j.address)}</td>
-                <td><span class="badge badge-round">${j.round_name||'—'}</span></td>
-                <td><span class="badge badge-balance">£${parseFloat(j.balance).toFixed(2)}</span></td>
-                <td style="color:var(--text3);font-size:12px">${j.phone||'—'}</td>
-                <td style="color:var(--text3);font-size:12px">${j.email||'—'}</td>
-                <td><button class="btn btn-sm btn-success" onclick="event.stopPropagation();openRecordPayment('${j.id}')">Record payment</button></td>
-              </tr>`).join('')}
-          </tbody>
-        </table>
-      </div>
-    </div>
-  `;
-}
-
-// ── JOB DETAIL PANEL
-function openJobPanel(id){
-  const j=allJobs.find(x=>x.id===id);
-  if(!j) return;
-  document.getElementById('panelTitle').textContent=j.customer_name||'Job';
-  document.getElementById('panelSub').textContent=shortAddr(j.address);
-  document.getElementById('panelStatus').innerHTML=`<span class="badge badge-${j.status}">${j.status}</span>`;
-
-  const monthly=weeklyValue(j.price,j.frequency)*4.33;
-  const annual=monthly*12;
-
-  document.getElementById('panelBody').innerHTML=`
-    <div class="panel-section">
-      <div class="panel-section-title">Customer</div>
-      <div class="detail-row"><div class="detail-key">Name</div><div class="detail-val" style="font-weight:500">${j.customer_name||'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Address</div><div class="detail-val">${j.address||'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Phone</div><div class="detail-val">${j.phone?`<a href="tel:${j.phone}" style="color:var(--blue)">${j.phone}</a>`:'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Email</div><div class="detail-val">${j.email?`<a href="mailto:${j.email}" style="color:var(--blue);font-size:11px">${j.email}</a>`:'—'}</div></div>
-    </div>
-    <div class="panel-section">
-      <div class="panel-section-title">Job details</div>
-      <div class="detail-row"><div class="detail-key">Job ref</div><div class="detail-val" style="font-size:11px;color:var(--text3)">${j.job_ref||'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Service</div><div class="detail-val">${j.service||'Window Cleaning'}</div></div>
-      <div class="detail-row"><div class="detail-key">Frequency</div><div class="detail-val">${j.frequency_raw||freqLabel(j.frequency)}</div></div>
-      <div class="detail-row"><div class="detail-key">Round</div><div class="detail-val"><span class="badge badge-round">${j.round_name||'—'}</span></div></div>
-      <div class="detail-row"><div class="detail-key">Assignee</div><div class="detail-val" style="color:${opColour(firstOp(j.assignee))}">${j.assignee||'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Notes</div><div class="detail-val" style="color:var(--text3)">${j.notes||'—'}</div></div>
-    </div>
-    <div class="panel-section">
-      <div class="panel-section-title">Revenue</div>
-      <div class="detail-row"><div class="detail-key">Per visit</div><div class="detail-val" style="font-weight:600;color:var(--green)">£${j.price||0}</div></div>
-      <div class="detail-row"><div class="detail-key">Per month</div><div class="detail-val" style="color:var(--green)">£${monthly.toFixed(2)}</div></div>
-      <div class="detail-row"><div class="detail-key">Per year</div><div class="detail-val" style="color:var(--green)">£${annual.toFixed(2)}</div></div>
-      <div class="detail-row"><div class="detail-key">Balance</div><div class="detail-val">${parseFloat(j.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(j.balance).toFixed(2)} owed</span>`:'£0.00'}</div></div>
-    </div>
-    <div class="panel-section">
-      <div class="panel-section-title">History</div>
-      <div class="detail-row"><div class="detail-key">Last done</div><div class="detail-val">${fmtDate(j.last_done)}</div></div>
-      <div class="detail-row"><div class="detail-key">Next due</div><div class="detail-val" class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</div></div>
-      <div class="detail-row"><div class="detail-key">Done</div><div class="detail-val">${j.done||0} times</div></div>
-      <div class="detail-row"><div class="detail-key">Skipped</div><div class="detail-val">${j.skipped||0}</div></div>
-      <div class="detail-row"><div class="detail-key">Not done</div><div class="detail-val">${j.not_done||0}</div></div>
-    </div>
-    <div class="panel-section">
-      <div class="panel-section-title">Edit job</div>
-      <div class="form-group"><label class="form-label">Price per visit (£)</label>
-        <input class="form-input" id="edit_price" type="number" step="0.50" value="${j.price||0}"></div>
-      <div class="form-group"><label class="form-label">Round</label>
-        <select class="form-input" id="edit_round">
-          ${allRounds.map(r=>`<option value="${r.name}" ${r.name===j.round_name?'selected':''}>${r.name}</option>`).join('')}
-          <option value="" ${!j.round_name?'selected':''}>— No round —</option>
-        </select></div>
-      <div class="form-group"><label class="form-label">Status</label>
-        <select class="form-input" id="edit_status">
-          <option value="active" ${j.status==='active'?'selected':''}>Active</option>
-          <option value="inactive" ${j.status==='inactive'?'selected':''}>Inactive</option>
-          <option value="prospect" ${j.status==='prospect'?'selected':''}>Prospect</option>
-        </select></div>
-      <div class="form-group"><label class="form-label">Notes</label>
-        <textarea class="form-input" id="edit_notes" rows="2">${j.notes||''}</textarea></div>
-      <button class="btn btn-primary" style="width:100%" onclick="saveJobEdit('${j.id}')">Save changes</button>
-    </div>
-  `;
-
-  document.getElementById('panelActions').innerHTML=`
-    <button class="btn btn-success" style="flex:1" onclick="openRecordPayment('${j.id}')">£ Record payment</button>
-    <button class="btn" style="flex:1" onclick="markJobDone('${j.id}')">✓ Mark done</button>
-    <button class="btn btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
-  `;
-
-  document.getElementById('detailPanel').classList.add('open');
-}
-
-async function saveJobEdit(id){
-  const price=parseFloat(document.getElementById('edit_price').value)||0;
-  const round_name=document.getElementById('edit_round').value;
-  const status=document.getElementById('edit_status').value;
-  const notes=document.getElementById('edit_notes').value.trim();
-  const {error}=await sb.from('jobs').update({price,round_name,status,notes}).eq('id',id);
-  if(error){showToast('Save failed','error');return;}
-  const j=allJobs.find(x=>x.id===id);
-  if(j){Object.assign(j,{price,round_name,status,notes});}
-  showToast('Job saved');
-  renderCurrentPage();
-}
-
-async function markJobDone(id){
-  const j=allJobs.find(x=>x.id===id);
-  if(!j) return;
-  const newDone=(j.done||0)+1;
-  const lastDone=todayStr;
-  const {error}=await sb.from('jobs').update({done:newDone,last_done:lastDone}).eq('id',id);
-  if(error){showToast('Failed','error');return;}
-  Object.assign(j,{done:newDone,last_done:lastDone});
-  showToast('Marked as done');
-  openJobPanel(id);
-}
-
-async function deleteJob(id){
-  if(!confirm('Delete this job permanently?')) return;
-  const {error}=await sb.from('jobs').delete().eq('id',id);
-  if(error){showToast('Delete failed','error');return;}
-  allJobs=allJobs.filter(j=>j.id!==id);
-  closePanel();
-  showToast('Job deleted');
-  renderCurrentPage();
-}
-
-// ── CUSTOMER PANEL
-function openCustomerPanel(id){
-  const cu=allCustomers.find(x=>x.id===id);
-  if(!cu) return;
-  const custJobs=allJobs.filter(j=>j.customer_id===id);
-  document.getElementById('panelTitle').textContent=cu.name;
-  document.getElementById('panelSub').textContent=shortAddr(cu.address);
-  document.getElementById('panelStatus').innerHTML=`<span class="badge badge-${cu.status||'active'}">${cu.status||'active'}</span>`;
-  document.getElementById('panelBody').innerHTML=`
-    <div class="panel-section">
-      <div class="panel-section-title">Contact</div>
-      <div class="detail-row"><div class="detail-key">Reference</div><div class="detail-val" style="font-size:11px;color:var(--text3)">${cu.reference||'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Address</div><div class="detail-val">${cu.address||'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Phone</div><div class="detail-val">${cu.phone?`<a href="tel:${cu.phone}" style="color:var(--blue)">${cu.phone}</a>`:'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Email</div><div class="detail-val">${cu.email?`<a href="mailto:${cu.email}" style="color:var(--blue);font-size:11px">${cu.email}</a>`:'—'}</div></div>
-      <div class="detail-row"><div class="detail-key">Balance</div><div class="detail-val">${parseFloat(cu.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(cu.balance).toFixed(2)}</span>`:'£0.00'}</div></div>
-    </div>
-    <div class="panel-section">
-      <div class="panel-section-title">Jobs (${custJobs.length})</div>
-      ${custJobs.map(j=>`
-        <div style="padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="openJobPanel('${j.id}')">
-          <div style="display:flex;justify-content:space-between;align-items:center">
-            <span style="font-size:12px;font-weight:500">${j.service||'Window Cleaning'}</span>
-            <span style="font-size:12px;color:var(--green);font-weight:600">£${j.price}</span>
-          </div>
-          <div style="font-size:11px;color:var(--text3);margin-top:3px">${j.round_name||'No round'} · ${freqLabel(j.frequency)} · <span class="badge badge-${j.status}" style="font-size:9px">${j.status}</span></div>
-          <div style="font-size:11px;color:var(--text3);margin-top:2px">Next due: ${fmtDate(j.next_due)}</div>
-        </div>`).join('')}
-    </div>
-  `;
-  document.getElementById('panelActions').innerHTML=`<button class="btn" style="flex:1" onclick="closePanel()">Close</button>`;
-  document.getElementById('detailPanel').classList.add('open');
-}
-
-// ── ADD PAYMENT PANEL
-function openRecordPayment(jobId){
-  const j=allJobs.find(x=>x.id===jobId);
-  document.getElementById('panelTitle').textContent='Record Payment';
-  document.getElementById('panelSub').textContent=j?j.customer_name:'';
-  document.getElementById('panelStatus').innerHTML='';
-  document.getElementById('panelBody').innerHTML=`
-    <div class="panel-section">
-      <div class="form-group"><label class="form-label">Amount (£)</label>
-        <input class="form-input" id="pay_amount" type="number" step="0.01" placeholder="0.00" value="${j?parseFloat(j.balance||0).toFixed(2):''}"></div>
-      <div class="form-group"><label class="form-label">Payment method</label>
-        <select class="form-input" id="pay_method">
-          <option value="cash">Cash</option>
-          <option value="bacs">BACS</option>
-          <option value="gocardless">GoCardless</option>
-          <option value="stripe">Stripe</option>
-          <option value="cheque">Cheque</option>
-        </select></div>
-      <div class="form-group"><label class="form-label">Date</label>
-        <input class="form-input" id="pay_date" type="date" value="${todayStr}"></div>
-      <div class="form-group"><label class="form-label">Notes</label>
-        <input class="form-input" id="pay_notes" placeholder="Optional reference..."></div>
-    </div>
-  `;
-  document.getElementById('panelActions').innerHTML=`
-    <button class="btn btn-success" style="flex:1" onclick="savePayment('${jobId}')">Save payment</button>
-    <button class="btn" onclick="closePanel()">Cancel</button>
-  `;
-  document.getElementById('detailPanel').classList.add('open');
-}
-
-async function savePayment(jobId){
-  const amount=parseFloat(document.getElementById('pay_amount').value)||0;
-  const method=document.getElementById('pay_method').value;
-  const date=document.getElementById('pay_date').value;
-  const notes=document.getElementById('pay_notes').value.trim();
-  if(!amount){showToast('Enter an amount','error');return;}
-
-  const j=allJobs.find(x=>x.id===jobId);
-  const payment={id:genId(),customer_id:j?j.customer_id:'',job_id:jobId,amount,method,notes,payment_date:date,reference:''};
-
-  const {error}=await sb.from('payments').insert(payment);
-  if(error){showToast('Failed to save payment','error');return;}
-
-  // Update job balance
-  if(j){
-    const newBalance=Math.max(0,(parseFloat(j.balance)||0)-amount);
-    await sb.from('jobs').update({balance:newBalance}).eq('id',jobId);
-    j.balance=newBalance;
-  }
-
-  allPayments.unshift(payment);
-  showToast(`Payment of £${amount.toFixed(2)} recorded`);
-  closePanel();
-  renderCurrentPage();
-}
-
-function openAddPaymentPanel(){openRecordPayment('');}
-
-// ── ADD JOB PANEL
-function openAddJobPanel(){
-  document.getElementById('panelTitle').textContent='Add new job';
-  document.getElementById('panelSub').textContent='';
-  document.getElementById('panelStatus').innerHTML='';
-  document.getElementById('panelBody').innerHTML=`
-    <div class="panel-section">
-      <div class="form-group"><label class="form-label">Customer name *</label><input class="form-input" id="new_name" placeholder="Full name"></div>
-      <div class="form-group"><label class="form-label">Address *</label><input class="form-input" id="new_addr" placeholder="Full address"></div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="new_phone" placeholder="07..."></div>
-        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="new_email" type="email" placeholder="email@..."></div>
-      </div>
-      <div class="form-row">
-        <div class="form-group"><label class="form-label">Price (£) *</label><input class="form-input" id="new_price" type="number" step="0.50" placeholder="0.00"></div>
-        <div class="form-group"><label class="form-label">Frequency</label>
-          <select class="form-input" id="new_freq">
-            <option value="1w">1-weekly</option>
-            <option value="2w">2-weekly</option>
-            <option value="4w" selected>4-weekly</option>
-            <option value="6w">6-weekly</option>
-            <option value="8w">8-weekly</option>
-            <option value="12w">12-weekly</option>
-            <option value="ad_hoc">Ad hoc</option>
-          </select></div>
-      </div>
-      <div class="form-group"><label class="form-label">Round</label>
-        <select class="form-input" id="new_round">
-          <option value="">— No round —</option>
-          ${allRounds.map(r=>`<option value="${r.name}">${r.name}</option>`).join('')}
-        </select></div>
-      <div class="form-group"><label class="form-label">Assignee</label>
-        <select class="form-input" id="new_assignee">
-          <option value="">— Unassigned —</option>
-          ${['Nick Kennedy','Danny','Jonny','Junior','Jordan','Austin','Thierry','Adam Steward'].map(op=>`<option value="${op}">${op}</option>`).join('')}
-        </select></div>
-      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="new_notes" rows="2" placeholder="Access info..."></textarea></div>
-    </div>
-  `;
-  document.getElementById('panelActions').innerHTML=`
-    <button class="btn btn-primary" style="flex:1" onclick="saveNewJob()">Add job</button>
-    <button class="btn" onclick="closePanel()">Cancel</button>
-  `;
-  document.getElementById('detailPanel').classList.add('open');
-}
-
-async function saveNewJob(){
-  const name=document.getElementById('new_name').value.trim();
-  const addr=document.getElementById('new_addr').value.trim();
-  const price=parseFloat(document.getElementById('new_price').value)||0;
-  if(!name||!addr||!price){showToast('Please fill required fields','error');return;}
-
-  const custId=genId();
-  const jobId=genId();
-  const cu={id:custId,reference:'',name,address:addr,phone:document.getElementById('new_phone').value.trim(),email:document.getElementById('new_email').value.trim(),status:'active',balance:0};
-  const job={id:jobId,job_ref:'',customer_id:custId,customer_name:name,address:addr,phone:cu.phone,email:cu.email,status:'active',balance:0,assignee:document.getElementById('new_assignee').value,notes:document.getElementById('new_notes').value.trim(),service:'Window Cleaning',frequency:document.getElementById('new_freq').value,round_name:document.getElementById('new_round').value,price,duration:'00:30',occurrences:0,not_done:0,skipped:0,done:0,last_done:null,next_due:null,source:''};
-
-  const {error:ce}=await sb.from('customers').insert(cu);
-  if(ce){showToast('Failed to save customer','error');return;}
-  const {error:je}=await sb.from('jobs').insert(job);
-  if(je){showToast('Failed to save job','error');return;}
-
-  allCustomers.push(cu);
-  allJobs.push(job);
-  showToast('Job added: '+name);
-  closePanel();
-  renderCurrentPage();
-}
-
-// ── SEARCH
-function onSearch(val){
-  if(!val||val.length<2){hideSearch();return;}
-  const q=val.toLowerCase();
-  const results=allJobs.filter(j=>
-    (j.customer_name||'').toLowerCase().includes(q)||
-    (j.address||'').toLowerCase().includes(q)||
-    (j.phone||'').includes(q)||
-    (j.round_name||'').toLowerCase().includes(q)
-  ).slice(0,10);
-
-  const el=document.getElementById('searchResults');
-  if(!results.length){el.style.display='none';return;}
-  el.style.display='block';
-  el.innerHTML=results.map(j=>`
-    <div class="search-result-item" onclick="openJobPanel('${j.id}');document.getElementById('globalSearch').value='';hideSearch()">
-      <div class="sri-name">${j.customer_name||'—'}</div>
-      <div class="sri-addr">${shortAddr(j.address)}</div>
-      <div class="sri-meta">
-        <span class="badge badge-round" style="font-size:9px">${j.round_name||'—'}</span>
-        <span style="font-size:10px;color:var(--green)">£${j.price}</span>
-        <span class="badge badge-${j.status}" style="font-size:9px">${j.status}</span>
-      </div>
-    </div>`).join('');
-}
-
-function hideSearch(){document.getElementById('searchResults').style.display='none';}
-
-// ── PANEL
-function closePanel(){document.getElementById('detailPanel').classList.remove('open');}
-
-// ── HELPERS
-function shortAddr(a){
-  if(!a) return '—';
-  const parts=a.split(',');
-  return parts.slice(0,2).join(',').trim();
-}
-
-function freqLabel(f){
-  const m={'1w':'Weekly','2w':'2-weekly','4w':'4-weekly','6w':'6-weekly','8w':'8-weekly','12w':'12-weekly','ad_hoc':'Ad hoc'};
-  return m[f]||f||'—';
-}
-
-function weeklyValue(price,freq){
-  const p=parseFloat(price)||0;
-  const m={'1w':1,'2w':0.5,'4w':0.25,'6w':1/6,'8w':0.125,'12w':1/12,'ad_hoc':0};
-  return p*(m[freq]||0);
-}
-
-function fmtDate(d){
-  if(!d||d==='never') return '—';
+async function geocode(job){
   try{
-    const dt=new Date(d+'T12:00:00');
-    return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
-  }catch(e){return d;}
+    const q=encodeURIComponent(job.address+', '+job.postcode+', UK');
+    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=1`);
+    const d=await r.json();
+    if(d&&d.length){
+      job.lat=parseFloat(d[0].lat);job.lng=parseFloat(d[0].lon);
+      await sb.from('jobs').update({lat:job.lat,lng:job.lng}).eq('id',job.id);
+      renderMarkers();map.setView([job.lat,job.lng],15);
+    }
+  }catch(e){}
 }
 
-function dueClass(d){
-  if(!d||d==='never') return 'due-future';
-  if(d<todayStr) return 'due-overdue';
-  if(d===todayStr) return 'due-today';
-  return 'due-future';
+function locateMe(){
+  if(!navigator.geolocation){toast('Geolocation not available','err');return;}
+  navigator.geolocation.getCurrentPosition(p=>map.setView([p.coords.latitude,p.coords.longitude],15),()=>toast('Could not get location','err'));
 }
 
-function firstOp(assignee){
-  if(!assignee) return '—';
-  return assignee.split(',')[0].trim();
+function exportCSV(){
+  if(!jobs.length){toast('No jobs to export','err');return;}
+  const hdrs=['Name','Address','Postcode','Mobile','Email','Frequency','Visits/yr','Price (£)','Annual (£)','Monthly (£)','Round','Notes','Canvasser','Date added'];
+  const rows=jobs.map(j=>{
+    const f=fByVal(j.frequency);
+    return [j.customer_name,j.address,j.postcode,j.mobile||'',j.email||'',
+      f.label,f.vpy?Math.round(f.vpy*10)/10:0,j.price,
+      annVal(j.price,j.frequency).toFixed(2),monVal(j.price,j.frequency).toFixed(2),
+      j.round_name||'',j.notes||'',j.canvasser||'',j.date_added]
+      .map(v=>`"${String(v||'').replace(/"/g,'""')}"`);
+  });
+  const csv=[hdrs.join(','),...rows.map(r=>r.join(','))].join('\n');
+  const a=document.createElement('a');
+  a.href=URL.createObjectURL(new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'}));
+  a.download=`wcc_jobs_${todayStr}.csv`;
+  document.body.appendChild(a);a.click();document.body.removeChild(a);
+  toast('CSV exported!');
 }
 
-function normaliseOp(assignee){
-  if(!assignee) return ['Unknown'];
-  return assignee.split(',').map(s=>s.trim()).filter(Boolean);
-}
-
-// ── Boot
-loadAll();
+initMap();loadData();
 </script>
 </body>
 </html>
