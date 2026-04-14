@@ -3,640 +3,1052 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>WCC Local</title>
+<title>RouteFlow — WCC</title>
 <meta name="apple-mobile-web-app-capable" content="yes">
-<meta name="apple-mobile-web-app-status-bar-style" content="default">
-<meta name="apple-mobile-web-app-title" content="WCC Local">
-<meta name="mobile-web-app-capable" content="yes">
-<meta name="application-name" content="WCC Local">
-<meta name="theme-color" content="#185FA5">
-<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<meta name="apple-mobile-web-app-title" content="RouteFlow">
+<meta name="theme-color" content="#0F172A">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css"/>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  :root {
-    --bg-primary: #ffffff; --bg-secondary: #f5f5f4; --bg-tertiary: #eae9e6;
-    --text-primary: #1a1a1a; --text-secondary: #6b6b6b;
-    --border: rgba(0,0,0,0.12); --border-med: rgba(0,0,0,0.2);
-    --radius-md: 8px; --radius-lg: 12px;
-    --blue: #185FA5; --blue-light: #E6F1FB; --blue-dark: #0C447C;
-    --green: #0F6E56; --green-light: #E1F5EE; --green-dark: #085041;
-    --amber-light: #FAEEDA; --amber-dark: #633806; --red: #A32D2D;
-  }
-  body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: var(--bg-tertiary); color: var(--text-primary); min-height: 100vh; font-size: 15px; }
-  .app { display: flex; flex-direction: column; height: 100vh; min-height: 600px; }
-  .topbar { background: var(--bg-primary); border-bottom: 0.5px solid var(--border); padding: 10px 16px; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0; }
-  .topbar-title { font-size: 15px; font-weight: 600; display: flex; align-items: center; gap: 8px; }
-  .date-badge { font-size: 12px; color: var(--text-secondary); background: var(--bg-secondary); padding: 3px 8px; border-radius: var(--radius-md); }
-  .sync-dot { width: 8px; height: 8px; border-radius: 50%; background: #ccc; display: inline-block; margin-left: 4px; transition: background 0.3s; }
-  .sync-dot.connected { background: var(--green); }
-  .sync-dot.syncing { background: #EF9F27; }
-  .sync-dot.error { background: var(--red); }
-  .stats-bar { background: var(--bg-primary); border-bottom: 0.5px solid var(--border); padding: 8px 16px; display: grid; grid-template-columns: repeat(4, minmax(0,1fr)); gap: 8px; flex-shrink: 0; }
-  .stat { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 8px 10px; }
-  .stat-label { font-size: 11px; color: var(--text-secondary); margin-bottom: 2px; }
-  .stat-value { font-size: 18px; font-weight: 600; }
-  .stat-value.green { color: var(--green); }
-  .stat-value.blue { color: var(--blue); }
-  .main { display: flex; flex: 1; overflow: hidden; }
-  .sidebar { width: 340px; min-width: 280px; background: var(--bg-primary); border-right: 0.5px solid var(--border); display: flex; flex-direction: column; overflow: hidden; }
-  .sidebar-tabs { display: flex; border-bottom: 0.5px solid var(--border); flex-shrink: 0; }
-  .tab { flex: 1; padding: 10px 4px; font-size: 12px; font-weight: 600; text-align: center; cursor: pointer; color: var(--text-secondary); border-bottom: 2px solid transparent; background: none; border-top: none; border-left: none; border-right: none; transition: color 0.15s; }
-  .tab.active { color: var(--text-primary); border-bottom: 2px solid var(--blue); }
-  .tab:hover { color: var(--text-primary); }
-  .sidebar-content { flex: 1; overflow-y: auto; padding: 12px; }
-  .form-group { margin-bottom: 10px; }
-  .form-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 4px; display: block; text-transform: uppercase; letter-spacing: 0.3px; }
-  .form-input { width: 100%; padding: 8px 10px; font-size: 14px; border: 0.5px solid var(--border-med); border-radius: var(--radius-md); background: var(--bg-primary); color: var(--text-primary); font-family: inherit; -webkit-appearance: none; }
-  .form-input:focus { outline: none; border-color: var(--blue); box-shadow: 0 0 0 3px rgba(24,95,165,0.15); }
-  select.form-input { cursor: pointer; }
-  textarea.form-input { resize: vertical; min-height: 60px; }
-  .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
-  .form-actions { display: flex; gap: 8px; margin-top: 12px; }
-  .btn { padding: 9px 14px; border-radius: var(--radius-md); font-size: 13px; font-weight: 600; cursor: pointer; border: 0.5px solid var(--border-med); background: var(--bg-primary); color: var(--text-primary); font-family: inherit; transition: background 0.15s; -webkit-appearance: none; }
-  .btn:hover { background: var(--bg-secondary); }
-  .btn:active { transform: scale(0.98); }
-  .btn-primary { background: var(--blue); color: white; border-color: var(--blue); }
-  .btn-primary:hover { background: var(--blue-dark); }
-  .btn-danger { background: var(--red); color: white; border-color: var(--red); font-size: 12px; padding: 7px 10px; }
-  .btn-success { background: var(--green); color: white; border-color: var(--green); }
-  .btn-success:hover { background: var(--green-dark); }
-  .job-list { display: flex; flex-direction: column; gap: 8px; }
-  .job-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px 12px; cursor: pointer; border: 0.5px solid var(--border); transition: border-color 0.15s; }
-  .job-card:hover { border-color: var(--border-med); }
-  .job-card.selected { border-color: var(--blue); background: var(--blue-light); }
-  .job-card-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
-  .job-card-addr { font-size: 11px; color: var(--text-secondary); margin-bottom: 5px; }
-  .job-card-meta { display: flex; gap: 5px; align-items: center; flex-wrap: wrap; }
-  .badge { font-size: 10px; padding: 2px 7px; border-radius: 20px; font-weight: 600; }
-  .badge-freq { background: var(--green-light); color: var(--green-dark); }
-  .badge-price { background: var(--blue-light); color: var(--blue-dark); }
-  .badge-annual { background: var(--amber-light); color: var(--amber-dark); }
-  .badge-today { background: var(--amber-light); color: var(--amber-dark); }
-  .badge-canvasser { background: #EEEDFE; color: #3C3489; }
-  .map-area { flex: 1; position: relative; }
-  #map { width: 100%; height: 100%; }
-  .map-btn { position: absolute; bottom: 16px; right: 16px; z-index: 999; background: var(--bg-primary); border: 0.5px solid var(--border-med); box-shadow: 0 2px 8px rgba(0,0,0,0.15); }
-  .analytics-title { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 8px; text-transform: uppercase; letter-spacing: 0.5px; }
-  .analytics-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 6px; margin-bottom: 4px; }
-  .a-card { background: var(--bg-secondary); border-radius: var(--radius-md); padding: 10px; }
-  .a-card-label { font-size: 11px; color: var(--text-secondary); }
-  .a-card-value { font-size: 16px; font-weight: 600; margin-top: 2px; }
-  .divider { border: none; border-top: 0.5px solid var(--border); margin: 12px 0; }
-  .empty-state { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 13px; }
-  .detail-header { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; }
-  .detail-avatar { width: 40px; height: 40px; border-radius: 50%; background: var(--blue-light); display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 13px; color: var(--blue); flex-shrink: 0; }
-  .detail-name { font-size: 15px; font-weight: 600; }
-  .detail-addr { font-size: 12px; color: var(--text-secondary); }
-  .detail-table { width: 100%; font-size: 13px; border-collapse: collapse; }
-  .detail-table td { padding: 6px 0; vertical-align: top; }
-  .detail-table td:first-child { color: var(--text-secondary); width: 90px; font-size: 12px; }
-  .detail-table tr { border-bottom: 0.5px solid var(--border); }
-  .detail-table tr:last-child { border-bottom: none; }
-  .freq-hint { font-size: 11px; color: var(--blue); margin-top: 4px; min-height: 14px; }
-  .section-label { font-size: 11px; font-weight: 600; color: var(--text-secondary); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.3px; }
-  .canvasser-setup { background: var(--blue-light); border: 0.5px solid var(--blue); border-radius: var(--radius-lg); padding: 16px; margin-bottom: 12px; }
-  .canvasser-setup p { font-size: 13px; color: var(--blue-dark); margin-bottom: 8px; font-weight: 500; }
-  .loading { text-align: center; padding: 32px 16px; color: var(--text-secondary); font-size: 13px; }
-  .toast { position: fixed; bottom: 24px; left: 50%; transform: translateX(-50%); background: var(--green); color: white; padding: 10px 20px; border-radius: var(--radius-md); font-size: 13px; font-weight: 500; z-index: 9999; opacity: 0; transition: opacity 0.25s; pointer-events: none; white-space: nowrap; box-shadow: 0 4px 12px rgba(0,0,0,0.2); }
-  .toast.show { opacity: 1; }
-  @media (max-width: 640px) {
-    .main { flex-direction: column; }
-    .sidebar { width: 100%; height: 55%; border-right: none; border-bottom: 0.5px solid var(--border); }
-    .map-area { min-height: 200px; }
-    .stats-bar { grid-template-columns: repeat(2, 1fr); }
-    .stat-value { font-size: 15px; }
-  }
+*{box-sizing:border-box;margin:0;padding:0}
+:root{
+  --bg:#0F172A;--bg2:#1E293B;--bg3:#334155;--bg4:#475569;
+  --card:#1E293B;--card2:#263348;
+  --text:#F1F5F9;--text2:#94A3B8;--text3:#64748B;
+  --blue:#3B82F6;--blue2:#1D4ED8;--blue-light:#EFF6FF;
+  --green:#10B981;--green2:#065F46;
+  --amber:#F59E0B;--amber2:#78350F;
+  --red:#EF4444;--red2:#7F1D1D;
+  --purple:#8B5CF6;
+  --border:rgba(255,255,255,0.08);
+  --radius:10px;--radius-lg:14px;
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,sans-serif;background:var(--bg);color:var(--text);min-height:100vh;font-size:14px}
+
+/* Layout */
+.app{display:flex;height:100vh;overflow:hidden}
+.sidebar{width:220px;background:var(--bg2);border-right:1px solid var(--border);display:flex;flex-direction:column;flex-shrink:0}
+.main{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.topbar{background:var(--bg2);border-bottom:1px solid var(--border);padding:12px 20px;display:flex;align-items:center;gap:12px;flex-shrink:0}
+.content{flex:1;overflow-y:auto;padding:20px}
+
+/* Sidebar */
+.sidebar-logo{padding:16px;border-bottom:1px solid var(--border)}
+.sidebar-logo h1{font-size:16px;font-weight:700;color:var(--text);letter-spacing:-0.3px}
+.sidebar-logo p{font-size:11px;color:var(--text3);margin-top:1px}
+.nav-section{padding:12px 8px 4px;font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px}
+.nav-item{display:flex;align-items:center;gap:10px;padding:8px 12px;border-radius:8px;cursor:pointer;color:var(--text2);font-size:13px;font-weight:500;transition:all 0.15s;margin:1px 8px}
+.nav-item:hover{background:var(--bg3);color:var(--text)}
+.nav-item.active{background:var(--blue2);color:white}
+.nav-item .icon{font-size:15px;width:18px;text-align:center}
+.sidebar-bottom{margin-top:auto;padding:12px;border-top:1px solid var(--border)}
+.operative-badge{background:var(--bg3);border-radius:8px;padding:8px 10px;font-size:12px;cursor:pointer}
+.operative-badge .label{color:var(--text3);font-size:10px;margin-bottom:2px}
+.operative-badge .name{color:var(--text);font-weight:600}
+
+/* Topbar */
+.topbar-title{font-size:16px;font-weight:600;flex:1}
+.topbar-sub{font-size:12px;color:var(--text3)}
+.search-wrap{position:relative;flex:1;max-width:320px}
+.search-input{width:100%;background:var(--bg3);border:1px solid var(--border);border-radius:8px;padding:7px 12px 7px 32px;font-size:13px;color:var(--text);font-family:inherit;outline:none}
+.search-input:focus{border-color:var(--blue)}
+.search-icon{position:absolute;left:10px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:13px}
+.sync-dot{width:8px;height:8px;border-radius:50%;background:#ccc;flex-shrink:0}
+.sync-dot.ok{background:var(--green)}
+.sync-dot.busy{background:var(--amber)}
+.sync-dot.err{background:var(--red)}
+.btn{padding:7px 14px;border-radius:8px;font-size:12px;font-weight:600;cursor:pointer;border:1px solid var(--border);background:var(--bg3);color:var(--text);font-family:inherit;transition:all 0.15s;display:inline-flex;align-items:center;gap:6px}
+.btn:hover{background:var(--bg4)}
+.btn-primary{background:var(--blue);border-color:var(--blue);color:white}
+.btn-primary:hover{background:var(--blue2)}
+.btn-success{background:var(--green);border-color:var(--green);color:white}
+.btn-danger{background:var(--red);border-color:var(--red);color:white;font-size:11px;padding:5px 10px}
+.btn-sm{padding:4px 10px;font-size:11px}
+
+/* Cards */
+.card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.card-sm{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:12px}
+
+/* Stats grid */
+.stats-grid{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:12px;margin-bottom:20px}
+.stat-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:16px}
+.stat-label{font-size:11px;color:var(--text3);margin-bottom:4px;text-transform:uppercase;letter-spacing:0.5px}
+.stat-value{font-size:24px;font-weight:700}
+.stat-value.blue{color:var(--blue)}
+.stat-value.green{color:var(--green)}
+.stat-value.amber{color:var(--amber)}
+.stat-value.red{color:var(--red)}
+.stat-sub{font-size:11px;color:var(--text3);margin-top:2px}
+
+/* Tables */
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px}
+th{text-align:left;padding:8px 12px;color:var(--text3);font-weight:600;font-size:11px;text-transform:uppercase;letter-spacing:0.5px;border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);vertical-align:middle}
+tr:hover td{background:var(--bg3)}
+tr:last-child td{border-bottom:none}
+
+/* Badges */
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;white-space:nowrap}
+.badge-active{background:rgba(16,185,129,0.15);color:#34D399}
+.badge-inactive{background:rgba(100,116,139,0.2);color:#94A3B8}
+.badge-prospect{background:rgba(245,158,11,0.15);color:#FCD34D}
+.badge-round{background:rgba(59,130,246,0.15);color:#93C5FD;max-width:120px;overflow:hidden;text-overflow:ellipsis}
+.badge-op{background:rgba(139,92,246,0.15);color:#C4B5FD}
+.badge-freq{background:rgba(16,185,129,0.1);color:#6EE7B7}
+.badge-due{background:rgba(245,158,11,0.15);color:#FCD34D}
+.badge-overdue{background:rgba(239,68,68,0.15);color:#FCA5A5}
+.badge-balance{background:rgba(239,68,68,0.15);color:#FCA5A5}
+
+/* Round cards */
+.rounds-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-bottom:20px}
+.round-card{background:var(--card);border:1px solid var(--border);border-radius:var(--radius-lg);padding:14px;cursor:pointer;transition:all 0.15s}
+.round-card:hover{border-color:var(--blue);background:var(--card2)}
+.round-card-name{font-size:14px;font-weight:600;margin-bottom:4px}
+.round-card-meta{font-size:11px;color:var(--text3);display:flex;gap:8px;flex-wrap:wrap}
+.round-dot{width:10px;height:10px;border-radius:50%;flex-shrink:0;margin-top:2px}
+
+/* Job detail panel */
+.detail-panel{position:fixed;right:0;top:0;bottom:0;width:420px;background:var(--bg2);border-left:1px solid var(--border);z-index:100;display:flex;flex-direction:column;transform:translateX(100%);transition:transform 0.25s ease}
+.detail-panel.open{transform:translateX(0)}
+.panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px;flex-shrink:0}
+.panel-close{background:var(--bg3);border:none;color:var(--text2);font-size:16px;width:28px;height:28px;border-radius:6px;cursor:pointer;display:flex;align-items:center;justify-content:center}
+.panel-body{flex:1;overflow-y:auto;padding:20px}
+.panel-section{margin-bottom:20px}
+.panel-section-title{font-size:10px;font-weight:600;color:var(--text3);text-transform:uppercase;letter-spacing:0.8px;margin-bottom:10px}
+.detail-row{display:flex;padding:7px 0;border-bottom:1px solid var(--border)}
+.detail-row:last-child{border-bottom:none}
+.detail-key{font-size:12px;color:var(--text3);width:110px;flex-shrink:0}
+.detail-val{font-size:12px;color:var(--text);flex:1;word-break:break-word}
+.panel-actions{padding:16px 20px;border-top:1px solid var(--border);display:flex;gap:8px;flex-shrink:0}
+
+/* Map */
+.map-container{border-radius:var(--radius-lg);overflow:hidden;border:1px solid var(--border)}
+#roundMap{height:340px;width:100%}
+
+/* Search results */
+.search-results{position:absolute;top:100%;left:0;right:0;background:var(--bg2);border:1px solid var(--border);border-radius:var(--radius);z-index:200;max-height:320px;overflow-y:auto;margin-top:4px;display:none}
+.search-result-item{padding:10px 14px;cursor:pointer;border-bottom:1px solid var(--border);display:flex;flex-direction:column;gap:2px}
+.search-result-item:hover{background:var(--bg3)}
+.search-result-item:last-child{border-bottom:none}
+.sri-name{font-size:13px;font-weight:500}
+.sri-addr{font-size:11px;color:var(--text3)}
+.sri-meta{display:flex;gap:6px;margin-top:3px}
+
+/* Loading */
+.loading{text-align:center;padding:48px;color:var(--text3)}
+.loading-spin{display:inline-block;width:24px;height:24px;border:2px solid var(--border);border-top-color:var(--blue);border-radius:50%;animation:spin 0.8s linear infinite;margin-bottom:8px}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* Section header */
+.section-header{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.section-header h2{font-size:16px;font-weight:600;flex:1}
+
+/* Filter bar */
+.filter-bar{display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap}
+.filter-btn{padding:5px 12px;border-radius:20px;font-size:12px;cursor:pointer;border:1px solid var(--border);background:transparent;color:var(--text2);font-family:inherit;transition:all 0.15s;white-space:nowrap}
+.filter-btn.active{background:var(--blue);border-color:var(--blue);color:white}
+.filter-btn:hover{background:var(--bg3)}
+
+/* Split view */
+.split-view{display:grid;grid-template-columns:1fr 1fr;gap:16px;height:calc(100vh - 160px)}
+.split-left{overflow-y:auto}
+.split-right{display:flex;flex-direction:column;gap:12px}
+
+/* Toast */
+.toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:var(--green);color:white;padding:10px 20px;border-radius:10px;font-size:13px;font-weight:500;z-index:9999;opacity:0;transition:opacity 0.25s;pointer-events:none;white-space:nowrap}
+.toast.show{opacity:1}
+.toast.error{background:var(--red)}
+
+/* Input */
+.form-input{width:100%;padding:8px 10px;font-size:13px;border:1px solid var(--border);border-radius:8px;background:var(--bg3);color:var(--text);font-family:inherit;outline:none}
+.form-input:focus{border-color:var(--blue)}
+select.form-input{cursor:pointer}
+.form-label{font-size:11px;font-weight:600;color:var(--text3);margin-bottom:4px;display:block;text-transform:uppercase;letter-spacing:0.3px}
+.form-group{margin-bottom:12px}
+.form-row{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+
+/* Due indicator */
+.due-today{color:var(--amber);font-weight:600}
+.due-overdue{color:var(--red);font-weight:600}
+.due-future{color:var(--text3)}
+
+/* Responsive */
+@media(max-width:768px){
+  .sidebar{display:none}
+  .stats-grid{grid-template-columns:repeat(2,1fr)}
+  .split-view{grid-template-columns:1fr;height:auto}
+  .detail-panel{width:100%}
+  .rounds-grid{grid-template-columns:repeat(2,1fr)}
+}
 </style>
 </head>
 <body>
 <div class="app">
-  <div class="topbar">
-    <div class="topbar-title">
-      &#x1FA9F; WCC Local
-      <span class="sync-dot" id="syncDot" title="Connecting..."></span>
+
+  <!-- Sidebar -->
+  <div class="sidebar">
+    <div class="sidebar-logo">
+      <h1>RouteFlow</h1>
+      <p>WCC Window Cleaning</p>
     </div>
-    <div style="display:flex;gap:8px;align-items:center;">
-      <span class="date-badge" id="todayLabel"></span>
-      <button class="btn btn-success" onclick="exportCSV()">Export CSV</button>
-    </div>
-  </div>
-  <div class="stats-bar">
-    <div class="stat"><div class="stat-label">Jobs today</div><div class="stat-value blue" id="statToday">0</div></div>
-    <div class="stat"><div class="stat-label">Value today</div><div class="stat-value green" id="statTodayVal">£0.00</div></div>
-    <div class="stat"><div class="stat-label">Proj. monthly</div><div class="stat-value green" id="statMonthly">£0.00</div></div>
-    <div class="stat"><div class="stat-label">Proj. annual</div><div class="stat-value green" id="statAnnual">£0.00</div></div>
-  </div>
-  <div class="main">
-    <div class="sidebar">
-      <div class="sidebar-tabs">
-        <button class="tab active" onclick="switchTab('add',this)">Add job</button>
-        <button class="tab" onclick="switchTab('list',this)">Job list</button>
-        <button class="tab" onclick="switchTab('analytics',this)">Analytics</button>
+    <div class="nav-section">Main</div>
+    <div class="nav-item active" onclick="showPage('dashboard',this)"><span class="icon">📊</span>Dashboard</div>
+    <div class="nav-item" onclick="showPage('rounds',this)"><span class="icon">🗺️</span>Rounds</div>
+    <div class="nav-item" onclick="showPage('jobs',this)"><span class="icon">📋</span>All Jobs</div>
+    <div class="nav-item" onclick="showPage('customers',this)"><span class="icon">👥</span>Customers</div>
+    <div class="nav-section">Finance</div>
+    <div class="nav-item" onclick="showPage('payments',this)"><span class="icon">💷</span>Payments</div>
+    <div class="nav-item" onclick="showPage('balances',this)"><span class="icon">⚠️</span>Balances</div>
+    <div class="sidebar-bottom">
+      <div class="operative-badge" onclick="showPage('dashboard',document.querySelector('.nav-item'))">
+        <div class="label">Viewing as</div>
+        <div class="name" id="viewingAs">All operatives</div>
       </div>
-      <div class="sidebar-content" id="tabContent"><div class="loading">Connecting to database...</div></div>
-    </div>
-    <div class="map-area">
-      <div id="map"></div>
-      <button class="btn map-btn" onclick="locateMe()">&#x25CE; Locate me</button>
     </div>
   </div>
+
+  <!-- Main area -->
+  <div class="main">
+    <div class="topbar">
+      <div class="topbar-title" id="pageTitle">Dashboard</div>
+      <div class="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input class="search-input" id="globalSearch" placeholder="Search customers, addresses..." oninput="onSearch(this.value)" onblur="setTimeout(()=>hideSearch(),200)">
+        <div class="search-results" id="searchResults"></div>
+      </div>
+      <span class="sync-dot" id="syncDot" title="Connecting..."></span>
+      <span style="font-size:11px;color:var(--text3)" id="syncLabel">Connecting...</span>
+    </div>
+    <div class="content" id="pageContent">
+      <div class="loading"><div class="loading-spin"></div><br>Loading RouteFlow...</div>
+    </div>
+  </div>
+
 </div>
+
+<!-- Detail panel -->
+<div class="detail-panel" id="detailPanel">
+  <div class="panel-header">
+    <button class="panel-close" onclick="closePanel()">✕</button>
+    <div style="flex:1">
+      <div style="font-size:15px;font-weight:600" id="panelTitle">Job Detail</div>
+      <div style="font-size:11px;color:var(--text3)" id="panelSub"></div>
+    </div>
+    <div id="panelStatus"></div>
+  </div>
+  <div class="panel-body" id="panelBody"></div>
+  <div class="panel-actions" id="panelActions"></div>
+</div>
+
 <div class="toast" id="toast"></div>
 
 <script>
-const SUPABASE_URL = 'https://gpjvqxoxkltrtdbbuqjh.supabase.co';
-const SUPABASE_KEY = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwanZxeG94a2x0cnRkYmJ1cWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjc4MjMsImV4cCI6MjA5MTcwMzgyM30.oUpgF1oI83ux7zd9KFhxei49zR2g1Fz6kzGG7DM8QTM';
-const sb = supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+const SB_URL='https://gpjvqxoxkltrtdbbuqjh.supabase.co';
+const SB_KEY='eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImdwanZxeG94a2x0cnRkYmJ1cWpoIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzYxMjc4MjMsImV4cCI6MjA5MTcwMzgyM30.oUpgF1oI83ux7zd9KFhxei49zR2g1Fz6kzGG7DM8QTM';
+const sb=supabase.createClient(SB_URL,SB_KEY);
 
-const FREQS = [
-  { value:'1w',  label:'1-weekly',  weeks:1,    visitsPerYear:52 },
-  { value:'2w',  label:'2-weekly',  weeks:2,    visitsPerYear:26 },
-  { value:'4w',  label:'4-weekly',  weeks:4,    visitsPerYear:13 },
-  { value:'6w',  label:'6-weekly',  weeks:6,    visitsPerYear:52/6 },
-  { value:'8w',  label:'8-weekly',  weeks:8,    visitsPerYear:52/8 },
-  { value:'12w', label:'12-weekly', weeks:12,   visitsPerYear:52/12 },
-  { value:'1off',label:'One-off',   weeks:null, visitsPerYear:0 }
-];
-function freqByValue(v) { return FREQS.find(f=>f.value===v)||FREQS[2]; }
-function annualValue(price,freqVal) { return (parseFloat(price)||0)*freqByValue(freqVal).visitsPerYear; }
-function monthlyValue(price,freqVal) { return annualValue(price,freqVal)/12; }
+// State
+let allJobs=[], allCustomers=[], allRounds=[], allPayments=[];
+let currentPage='dashboard';
+let roundMap=null, roundMarkers=[];
 
-const today    = new Date();
-const todayStr = today.toISOString().split('T')[0];
-let jobs=[], map, markers={}, selectedJob=null, currentTab='add', editingId=null;
-let canvasserName = localStorage.getItem('wcc_canvasser')||'';
+const today=new Date();
+const todayStr=today.toISOString().split('T')[0];
 
-document.getElementById('todayLabel').textContent =
-  today.toLocaleDateString('en-GB',{weekday:'short',day:'numeric',month:'short'});
+// Operative colours
+const OP_COLOURS={'Nick Kennedy':'#3B82F6','Nick kennedy':'#3B82F6','Nick':'#3B82F6',
+  'Danny':'#10B981','danny':'#10B981',
+  'Jonny':'#F59E0B','Jonny Joe':'#F59E0B','Jonny andy':'#F59E0B','Jonny Andy':'#F59E0B','Jinny':'#F59E0B',
+  'Junior':'#8B5CF6',
+  'Jordan':'#EC4899',
+  'Austin':'#06B6D4','austin':'#06B6D4',
+  'Thierry':'#EF4444',
+  'Adam Steward':'#84CC16',
+  'Charlotte Hillas':'#F97316'};
 
-function setSyncStatus(s) {
+function opColour(name){
+  if(!name) return '#64748B';
+  const n=name.trim();
+  return OP_COLOURS[n]||'#64748B';
+}
+
+// ── Sync status
+function setSyncStatus(s,label){
   const d=document.getElementById('syncDot');
+  const l=document.getElementById('syncLabel');
   d.className='sync-dot '+s;
-  d.title=s==='connected'?'Connected – all data shared':s==='syncing'?'Saving...':'Connection error';
+  l.textContent=label||s;
 }
 
-function dbToJob(d) {
-  return { id:d.id, name:d.name, address:d.address, postcode:d.postcode,
-    mobile:d.mobile||'', email:d.email||'', frequency:d.frequency,
-    price:d.price, notes:d.notes||'', dateAdded:d.date_added,
-    lat:d.lat, lng:d.lng, canvasser:d.canvasser||'' };
-}
-
-async function loadJobs() {
-  try {
-    setSyncStatus('syncing');
-    const {data,error} = await sb.from('jobs').select('*').order('created_at',{ascending:false});
-    if (error) throw error;
-    jobs=data.map(dbToJob);
-    setSyncStatus('connected');
-  } catch(e) {
-    setSyncStatus('error');
-    showToast('Could not connect to database');
-  }
-  renderAll();
-}
-
-async function saveJob(job) {
-  setSyncStatus('syncing');
-  try {
-    const {error} = await sb.from('jobs').upsert({
-      id:job.id, name:job.name, address:job.address, postcode:job.postcode,
-      mobile:job.mobile, email:job.email, frequency:job.frequency,
-      price:job.price, notes:job.notes, date_added:job.dateAdded,
-      lat:job.lat, lng:job.lng, canvasser:job.canvasser
-    });
-    if (error) throw error;
-    setSyncStatus('connected');
-  } catch(e) { setSyncStatus('error'); showToast('Save failed — check connection'); }
-}
-
-async function deleteJobFromDb(id) {
-  try {
-    const {error} = await sb.from('jobs').delete().eq('id',id);
-    if (error) throw error;
-    setSyncStatus('connected');
-  } catch(e) { setSyncStatus('error'); }
-}
-
-// Realtime — all phones update instantly when anyone adds a job
-sb.channel('jobs-changes')
-  .on('postgres_changes',{event:'*',schema:'public',table:'jobs'}, payload => {
-    if (payload.eventType==='INSERT'||payload.eventType==='UPDATE') {
-      const j=dbToJob(payload.new);
-      const idx=jobs.findIndex(x=>x.id===j.id);
-      if (idx>=0) jobs[idx]=j; else jobs.unshift(j);
-      if (markers[j.id]) { map.removeLayer(markers[j.id]); delete markers[j.id]; }
-    } else if (payload.eventType==='DELETE') {
-      jobs=jobs.filter(x=>x.id!==payload.old.id);
-      if (markers[payload.old.id]) { map.removeLayer(markers[payload.old.id]); delete markers[payload.old.id]; }
-    }
-    renderAll();
-  })
-  .subscribe();
-
-function genId() { return Date.now().toString(36)+Math.random().toString(36).slice(2,5); }
-function initials(n) { return n.split(' ').slice(0,2).map(w=>w[0]||'').join('').toUpperCase()||'?'; }
-function esc(s) { return String(s||'').replace(/"/g,'&quot;').replace(/</g,'&lt;'); }
-function showToast(msg) {
+function showToast(msg,type='ok'){
   const t=document.getElementById('toast');
-  t.textContent=msg; t.classList.add('show');
-  setTimeout(()=>t.classList.remove('show'),2500);
+  t.textContent=msg;
+  t.className='toast show'+(type==='error'?' error':'');
+  setTimeout(()=>t.className='toast',2500);
 }
 
-function switchTab(tab,el) {
-  currentTab=tab;
-  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
-  el.classList.add('active');
-  renderTab();
-}
-function renderAll() { updateStats(); renderTab(); renderMarkers(); }
+function genId(){return Date.now().toString(36)+Math.random().toString(36).slice(2,6)}
 
-function updateStats() {
-  const tj=jobs.filter(j=>j.dateAdded===todayStr);
-  const tv=tj.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
-  const tm=jobs.reduce((s,j)=>s+monthlyValue(j.price,j.frequency),0);
-  const ta=jobs.reduce((s,j)=>s+annualValue(j.price,j.frequency),0);
-  document.getElementById('statToday').textContent=tj.length;
-  document.getElementById('statTodayVal').textContent='£'+tv.toFixed(2);
-  document.getElementById('statMonthly').textContent='£'+tm.toFixed(2);
-  document.getElementById('statAnnual').textContent='£'+ta.toFixed(2);
-}
-
-function renderTab() {
-  const c=document.getElementById('tabContent');
-  if (currentTab==='add') renderAddForm(c);
-  else if (currentTab==='list') renderList(c);
-  else renderAnalytics(c);
-}
-
-function saveCanvasserName() {
-  const v=document.getElementById('canvasserInput').value.trim();
-  if (!v) { showToast('Please enter your name'); return; }
-  canvasserName=v;
-  localStorage.setItem('wcc_canvasser',v);
-  renderTab();
-}
-
-function freqOptions(sel) {
-  return FREQS.map(f=>`<option value="${f.value}" ${sel===f.value?'selected':''}>${f.label}</option>`).join('');
-}
-
-function renderAddForm(c,prefill) {
-  const j=prefill||{};
-  const isEdit=!!editingId;
-  const selFreq=j.frequency||'4w';
-  let html='';
-  if (!canvasserName&&!isEdit) {
-    html+=`<div class="canvasser-setup">
-      <p>First, enter your name — it gets recorded with every job you add.</p>
-      <input class="form-input" id="canvasserInput" placeholder="Your name" style="margin-bottom:8px">
-      <button class="btn btn-primary" style="width:100%" onclick="saveCanvasserName()">Save my name</button>
-    </div>`;
+// ── Data loading
+async function loadAll(){
+  setSyncStatus('busy','Loading...');
+  try{
+    const [jr,cr,rr,pr]=await Promise.all([
+      sb.from('jobs').select('*').order('customer_name'),
+      sb.from('customers').select('*').order('name'),
+      sb.from('rounds').select('*').order('name'),
+      sb.from('payments').select('*').order('payment_date',{ascending:false})
+    ]);
+    if(jr.error) throw jr.error;
+    if(cr.error) throw cr.error;
+    allJobs=jr.data||[];
+    allCustomers=cr.data||[];
+    allRounds=rr.data||[];
+    allPayments=pr.data||[];
+    setSyncStatus('ok',`${allJobs.length} jobs loaded`);
+    renderCurrentPage();
+  }catch(e){
+    setSyncStatus('err','Connection error');
+    showToast('Could not load data: '+e.message,'error');
   }
-  html+=`
-    <div class="form-group"><label class="form-label">Full name *</label>
-      <input class="form-input" id="f_name" placeholder="Jane Smith" value="${esc(j.name)}"></div>
-    <div class="form-group"><label class="form-label">Address *</label>
-      <input class="form-input" id="f_address" placeholder="12 Oak Lane" value="${esc(j.address)}"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Postcode *</label>
-        <input class="form-input" id="f_postcode" placeholder="HG1 1AA" value="${esc(j.postcode)}"></div>
-      <div class="form-group"><label class="form-label">Mobile</label>
-        <input class="form-input" id="f_mobile" placeholder="07700 900000" value="${esc(j.mobile)}"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Email</label>
-      <input class="form-input" id="f_email" type="email" placeholder="jane@example.com" value="${esc(j.email)}"></div>
-    <div class="form-row">
-      <div class="form-group"><label class="form-label">Frequency *</label>
-        <select class="form-input" id="f_freq" onchange="updateFreqHint()">${freqOptions(selFreq)}</select>
-        <div class="freq-hint" id="freqHint"></div></div>
-      <div class="form-group"><label class="form-label">Price per visit (£) *</label>
-        <input class="form-input" id="f_price" type="number" step="0.50" min="0"
-          placeholder="0.00" value="${esc(j.price)}" oninput="updateFreqHint()"></div>
-    </div>
-    <div class="form-group"><label class="form-label">Notes</label>
-      <textarea class="form-input" id="f_notes" placeholder="Access info, gate codes, dogs...">${esc(j.notes)}</textarea></div>
-    <div class="form-actions">
-      <button class="btn btn-primary" style="flex:1" onclick="${isEdit?'saveEdit()':'addJob()'}">${isEdit?'Save changes':'Add job'}</button>
-      ${isEdit?`<button class="btn" onclick="cancelEdit()">Cancel</button>`:''}
-    </div>`;
-  c.innerHTML=html;
-  updateFreqHint();
 }
 
-function updateFreqHint() {
-  const fe=document.getElementById('f_freq');
-  const pe=document.getElementById('f_price');
-  const h=document.getElementById('freqHint');
-  if (!fe||!h) return;
-  const f=freqByValue(fe.value);
-  const p=parseFloat(pe?pe.value:0)||0;
-  if (!f.visitsPerYear) { h.textContent='One-off — no recurring value'; return; }
-  const vpy=Math.round(f.visitsPerYear*10)/10;
-  h.textContent=p>0?`${vpy} visits/yr · £${(p*f.visitsPerYear/12).toFixed(2)}/mo · £${(p*f.visitsPerYear).toFixed(2)}/yr`:`${vpy} visits/year`;
+// ── Navigation
+function showPage(page,el){
+  currentPage=page;
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  if(el) el.classList.add('active');
+  closePanel();
+  renderCurrentPage();
 }
 
-function getFormValues() {
-  return {
-    name:     document.getElementById('f_name').value.trim(),
-    address:  document.getElementById('f_address').value.trim(),
-    postcode: document.getElementById('f_postcode').value.trim().toUpperCase(),
-    mobile:   document.getElementById('f_mobile').value.trim(),
-    email:    document.getElementById('f_email').value.trim(),
-    frequency:document.getElementById('f_freq').value,
-    price:    parseFloat(document.getElementById('f_price').value||0).toFixed(2),
-    notes:    document.getElementById('f_notes').value.trim()
-  };
+function renderCurrentPage(){
+  const titles={dashboard:'Dashboard',rounds:'Rounds',jobs:'All Jobs',customers:'Customers',payments:'Payments',balances:'Outstanding Balances'};
+  document.getElementById('pageTitle').textContent=titles[currentPage]||currentPage;
+  const c=document.getElementById('pageContent');
+  if(currentPage==='dashboard') renderDashboard(c);
+  else if(currentPage==='rounds') renderRounds(c);
+  else if(currentPage==='jobs') renderJobsList(c);
+  else if(currentPage==='customers') renderCustomers(c);
+  else if(currentPage==='payments') renderPayments(c);
+  else if(currentPage==='balances') renderBalances(c);
 }
 
-async function addJob() {
-  if (!canvasserName) { showToast('Please enter your name first'); return; }
-  const v=getFormValues();
-  if (!v.name||!v.address||!v.postcode||parseFloat(v.price)===0) { showToast('Please fill in all required fields'); return; }
-  const job={id:genId(),...v,dateAdded:todayStr,lat:null,lng:null,canvasser:canvasserName};
-  jobs.unshift(job);
-  renderAll();
-  await saveJob(job);
-  geocode(job);
-  showToast('Job added: '+v.name);
-  ['f_name','f_address','f_postcode','f_mobile','f_email','f_price','f_notes'].forEach(id=>{
-    const el=document.getElementById(id); if(el) el.value='';
-  });
-  updateFreqHint();
-}
+// ── DASHBOARD
+function renderDashboard(c){
+  const active=allJobs.filter(j=>j.status==='active');
+  const todayJobs=allJobs.filter(j=>j.next_due===todayStr);
+  const overdue=allJobs.filter(j=>j.next_due&&j.next_due<todayStr&&j.status==='active');
+  const withBalance=allJobs.filter(j=>parseFloat(j.balance||0)>0);
+  const totalBalance=withBalance.reduce((s,j)=>s+(parseFloat(j.balance)||0),0);
+  const weeklyRev=active.reduce((s,j)=>s+weeklyValue(j.price,j.frequency),0);
+  const monthlyRev=weeklyRev*4.33;
+  const annualRev=weeklyRev*52;
 
-async function saveEdit() {
-  const j=jobs.find(x=>x.id===editingId); if(!j) return;
-  Object.assign(j,getFormValues());
-  editingId=null;
-  if (markers[j.id]) { map.removeLayer(markers[j.id]); delete markers[j.id]; }
-  renderAll();
-  await saveJob(j);
-  geocode(j);
-  showToast('Job updated');
-}
-
-function cancelEdit() { editingId=null; renderTab(); }
-
-function editJob(id) {
-  editingId=id;
-  const j=jobs.find(x=>x.id===id);
-  currentTab='add';
-  document.querySelectorAll('.tab').forEach((t,i)=>t.classList.toggle('active',i===0));
-  renderAddForm(document.getElementById('tabContent'),j);
-}
-
-async function deleteJob(id) {
-  if (!confirm('Delete this job? This cannot be undone.')) return;
-  jobs=jobs.filter(j=>j.id!==id);
-  if (markers[id]) { map.removeLayer(markers[id]); delete markers[id]; }
-  selectedJob=null;
-  renderAll();
-  await deleteJobFromDb(id);
-  showToast('Job deleted');
-}
-
-function renderList(c) {
-  if (!jobs.length) { c.innerHTML='<div class="empty-state">No jobs yet.<br>Add your first one!</div>'; return; }
-  const sorted=[...jobs].sort((a,b)=>b.dateAdded.localeCompare(a.dateAdded));
-  const todayOnly=sorted.filter(j=>j.dateAdded===todayStr);
-  const rest=sorted.filter(j=>j.dateAdded!==todayStr);
-  let html='';
-
-  if (selectedJob) {
-    const j=jobs.find(x=>x.id===selectedJob);
-    if (j) {
-      const f=freqByValue(j.frequency);
-      const ann=annualValue(j.price,j.frequency).toFixed(2);
-      const mon=monthlyValue(j.price,j.frequency).toFixed(2);
-      const vpy=f.visitsPerYear?Math.round(f.visitsPerYear*10)/10:'N/A';
-      html+=`<div style="background:var(--bg-primary);border:0.5px solid var(--border-med);border-radius:var(--radius-lg);padding:12px;margin-bottom:12px;">
-        <div class="detail-header">
-          <div class="detail-avatar">${initials(j.name)}</div>
-          <div><div class="detail-name">${j.name}</div><div class="detail-addr">${j.address}, ${j.postcode}</div></div>
-        </div>
-        <table class="detail-table">
-          ${j.mobile?`<tr><td>Mobile</td><td><a href="tel:${j.mobile}" style="color:var(--blue)">${j.mobile}</a></td></tr>`:''}
-          ${j.email?`<tr><td>Email</td><td style="word-break:break-all">${j.email}</td></tr>`:''}
-          <tr><td>Frequency</td><td>${f.label}</td></tr>
-          <tr><td>Visits/yr</td><td>${vpy}</td></tr>
-          <tr><td>Per visit</td><td>£${j.price}</td></tr>
-          <tr><td>Per month</td><td>£${mon}</td></tr>
-          <tr><td>Per year</td><td><strong>£${ann}</strong></td></tr>
-          <tr><td>Added</td><td>${new Date(j.dateAdded+'T12:00:00').toLocaleDateString('en-GB')}</td></tr>
-          ${j.canvasser?`<tr><td>Canvasser</td><td>${j.canvasser}</td></tr>`:''}
-          ${j.notes?`<tr><td>Notes</td><td>${j.notes}</td></tr>`:''}
-        </table>
-        <div style="display:flex;gap:8px;margin-top:10px;">
-          <button class="btn" style="flex:1;font-size:12px" onclick="editJob('${j.id}')">Edit</button>
-          <button class="btn btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
-          <button class="btn" style="font-size:12px" onclick="selectedJob=null;renderTab()">Close</button>
-        </div>
-      </div>`;
-    }
-  }
-
-  if (todayOnly.length) {
-    html+=`<div class="section-label">Today</div><div class="job-list">`;
-    todayOnly.forEach(j=>{html+=jobCard(j,true);}); html+='</div>';
-  }
-  if (rest.length) {
-    html+=`<div class="section-label" style="margin-top:14px">Previous</div><div class="job-list">`;
-    rest.forEach(j=>{html+=jobCard(j,false);}); html+='</div>';
-  }
-  c.innerHTML=html;
-}
-
-function jobCard(j,isToday) {
-  const f=freqByValue(j.frequency);
-  const ann=annualValue(j.price,j.frequency).toFixed(0);
-  return `<div class="job-card ${selectedJob===j.id?'selected':''}" onclick="selectJob('${j.id}')">
-    <div class="job-card-name">${j.name}</div>
-    <div class="job-card-addr">${j.address}, ${j.postcode}</div>
-    <div class="job-card-meta">
-      ${isToday?'<span class="badge badge-today">Today</span>':''}
-      <span class="badge badge-freq">${f.label}</span>
-      <span class="badge badge-price">£${j.price}/visit</span>
-      ${f.visitsPerYear?`<span class="badge badge-annual">£${ann}/yr</span>`:''}
-      ${j.canvasser?`<span class="badge badge-canvasser">${j.canvasser}</span>`:''}
-    </div>
-  </div>`;
-}
-
-function selectJob(id) {
-  selectedJob=(selectedJob===id)?null:id;
-  renderTab();
-  if (selectedJob&&markers[id]) { map.setView(markers[id].getLatLng(),16); markers[id].openPopup(); }
-}
-
-function renderAnalytics(c) {
-  const ta=jobs.reduce((s,j)=>s+annualValue(j.price,j.frequency),0);
-  const tm=ta/12;
-  const tj=jobs.filter(j=>j.dateAdded===todayStr);
-  const tv=tj.reduce((s,j)=>s+(parseFloat(j.price)||0),0);
-  const avg=jobs.length?jobs.reduce((s,j)=>s+(parseFloat(j.price)||0),0)/jobs.length:0;
-
-  const fb={};
-  FREQS.forEach(f=>{fb[f.value]={count:0,annual:0,label:f.label};});
-  jobs.forEach(j=>{
-    if(!fb[j.frequency]) fb[j.frequency]={count:0,annual:0,label:j.frequency};
-    fb[j.frequency].count++; fb[j.frequency].annual+=annualValue(j.price,j.frequency);
-  });
-
-  const bc={};
-  jobs.forEach(j=>{
-    const k=j.canvasser||'Unknown';
-    if(!bc[k]) bc[k]={count:0,annual:0};
-    bc[k].count++; bc[k].annual+=annualValue(j.price,j.frequency);
-  });
-
-  const bm={};
-  jobs.forEach(j=>{
-    const m=j.dateAdded?j.dateAdded.slice(0,7):'unknown';
-    if(!bm[m]) bm[m]={count:0,annual:0};
-    bm[m].count++; bm[m].annual+=annualValue(j.price,j.frequency);
-  });
-  const months=Object.keys(bm).sort().reverse().slice(0,6);
-  const maxMA=months.length?Math.max(...months.map(x=>bm[x].annual)):1;
-  const activeFreqs=FREQS.filter(f=>fb[f.value]&&fb[f.value].count>0);
-  const canvassers=Object.keys(bc).sort((a,b)=>bc[b].annual-bc[a].annual);
-
-  let html=`
-    <div class="analytics-title">All-time totals</div>
-    <div class="analytics-grid">
-      <div class="a-card"><div class="a-card-label">Total customers</div><div class="a-card-value blue">${jobs.length}</div></div>
-      <div class="a-card"><div class="a-card-label">Avg per visit</div><div class="a-card-value">£${avg.toFixed(2)}</div></div>
-      <div class="a-card"><div class="a-card-label">Proj. monthly</div><div class="a-card-value green">£${tm.toFixed(2)}</div></div>
-      <div class="a-card"><div class="a-card-label">Proj. annual</div><div class="a-card-value green">£${ta.toFixed(2)}</div></div>
-    </div>
-    <hr class="divider">
-    <div class="analytics-title">Today</div>
-    <div class="analytics-grid">
-      <div class="a-card"><div class="a-card-label">Jobs signed</div><div class="a-card-value blue">${tj.length}</div></div>
-      <div class="a-card"><div class="a-card-label">First clean value</div><div class="a-card-value green">£${tv.toFixed(2)}</div></div>
-    </div>`;
-
-  if (canvassers.length>0) {
-    html+=`<hr class="divider"><div class="analytics-title">By canvasser</div>`;
-    canvassers.forEach(name=>{
-      const b=bc[name];
-      const pct=ta?Math.min(100,(b.annual/ta)*100).toFixed(0):0;
-      html+=`<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
-        <span style="font-size:12px;color:var(--text-secondary);width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${name}</span>
-        <span style="font-size:11px;color:var(--text-secondary);width:38px;text-align:right;">${b.count} job${b.count!==1?'s':''}</span>
-        <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:6px;overflow:hidden;">
-          <div style="width:${pct}%;height:6px;background:#7F77DD;border-radius:3px;"></div>
-        </div>
-        <span style="font-size:12px;font-weight:600;min-width:66px;text-align:right;">£${b.annual.toFixed(0)}/yr</span>
-      </div>`;
+  // Jobs by operative
+  const byOp={};
+  active.forEach(j=>{
+    const ops=normaliseOp(j.assignee||j.source||'Unknown');
+    ops.forEach(op=>{
+      if(!byOp[op]) byOp[op]={count:0,monthly:0};
+      byOp[op].count++;
+      byOp[op].monthly+=weeklyValue(j.price,j.frequency)*4.33;
     });
+  });
+  const opList=Object.entries(byOp).sort((a,b)=>b[1].monthly-a[1].monthly).slice(0,8);
+
+  // Jobs due this week
+  const weekEnd=new Date(today); weekEnd.setDate(today.getDate()+7);
+  const dueThisWeek=allJobs.filter(j=>{
+    if(!j.next_due||j.status!=='active') return false;
+    const d=new Date(j.next_due);
+    return d>=today && d<=weekEnd;
+  });
+
+  c.innerHTML=`
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-label">Active jobs</div>
+        <div class="stat-value blue">${active.length}</div>
+        <div class="stat-sub">${allJobs.filter(j=>j.status==='inactive').length} inactive · ${allJobs.filter(j=>j.status==='prospect').length} prospects</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Monthly revenue</div>
+        <div class="stat-value green">£${monthlyRev.toFixed(0)}</div>
+        <div class="stat-sub">£${annualRev.toFixed(0)}/year projected</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Overdue jobs</div>
+        <div class="stat-value ${overdue.length>0?'red':'green'}">${overdue.length}</div>
+        <div class="stat-sub">${todayJobs.length} due today</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Outstanding balance</div>
+        <div class="stat-value ${totalBalance>0?'amber':'green'}">£${totalBalance.toFixed(2)}</div>
+        <div class="stat-sub">${withBalance.length} customers owe money</div>
+      </div>
+    </div>
+
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;margin-bottom:20px">
+      <div class="card">
+        <div class="section-header"><h2>By operative</h2></div>
+        ${opList.map(([op,data])=>`
+          <div style="display:flex;align-items:center;gap:10px;padding:7px 0;border-bottom:1px solid var(--border)">
+            <div style="width:8px;height:8px;border-radius:50%;background:${opColour(op)};flex-shrink:0"></div>
+            <span style="font-size:13px;flex:1">${op}</span>
+            <span style="font-size:11px;color:var(--text3)">${data.count} jobs</span>
+            <span style="font-size:13px;font-weight:600;color:var(--green);min-width:70px;text-align:right">£${data.monthly.toFixed(0)}/mo</span>
+          </div>`).join('')}
+      </div>
+      <div class="card">
+        <div class="section-header"><h2>Due this week <span style="font-size:12px;color:var(--text3);font-weight:400">(${dueThisWeek.length} jobs)</span></h2></div>
+        <div style="max-height:260px;overflow-y:auto">
+          ${dueThisWeek.length?dueThisWeek.slice(0,20).map(j=>`
+            <div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border);cursor:pointer" onclick="openJobPanel('${j.id}')">
+              <div>
+                <div style="font-size:12px;font-weight:500">${j.customer_name}</div>
+                <div style="font-size:11px;color:var(--text3)">${shortAddr(j.address)}</div>
+              </div>
+              <div style="margin-left:auto;text-align:right">
+                <div class="badge ${dueClass(j.next_due)}">${fmtDate(j.next_due)}</div>
+                <div style="font-size:11px;color:var(--green);margin-top:2px">£${j.price}</div>
+              </div>
+            </div>`).join('')
+          :'<div style="color:var(--text3);font-size:13px;padding:16px 0;text-align:center">No jobs due this week</div>'}
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="section-header">
+        <h2>Recent activity</h2>
+        <button class="btn btn-sm" onclick="showPage('jobs',document.querySelectorAll('.nav-item')[2])">View all jobs</button>
+      </div>
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Customer</th><th>Address</th><th>Round</th><th>Assignee</th><th>Price</th><th>Frequency</th><th>Next due</th><th>Status</th></tr></thead>
+          <tbody>
+            ${allJobs.filter(j=>j.status==='active').slice(0,15).map(j=>`
+              <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
+                <td><span style="font-weight:500">${j.customer_name||'—'}</span></td>
+                <td style="color:var(--text3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(j.address)}</td>
+                <td><span class="badge badge-round">${j.round_name||'—'}</span></td>
+                <td><span style="font-size:11px;color:${opColour(firstOp(j.assignee))}">${firstOp(j.assignee)}</span></td>
+                <td style="font-weight:600;color:var(--green)">£${j.price||0}</td>
+                <td><span class="badge badge-freq">${freqLabel(j.frequency)}</span></td>
+                <td class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</td>
+                <td><span class="badge badge-${j.status}">${j.status}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ── ROUNDS
+function renderRounds(c){
+  const rounds=allRounds.sort((a,b)=>a.name.localeCompare(b.name));
+  const jobsByRound={};
+  allJobs.forEach(j=>{
+    const r=j.round_name||'Unknown';
+    if(!jobsByRound[r]) jobsByRound[r]={jobs:[],active:0,monthly:0};
+    jobsByRound[r].jobs.push(j);
+    if(j.status==='active'){
+      jobsByRound[r].active++;
+      jobsByRound[r].monthly+=weeklyValue(j.price,j.frequency)*4.33;
+    }
+  });
+
+  c.innerHTML=`
+    <div class="section-header">
+      <h2>All rounds <span style="font-size:13px;color:var(--text3);font-weight:400">(${rounds.length})</span></h2>
+    </div>
+    <div class="rounds-grid">
+      ${rounds.map(r=>{
+        const data=jobsByRound[r.name]||{active:0,monthly:0,jobs:[]};
+        return `<div class="round-card" onclick="openRound('${encodeURIComponent(r.name)}')">
+          <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px">
+            <div class="round-dot" style="background:${r.colour||'#64748B'}"></div>
+            <div class="round-card-name">${r.name}</div>
+          </div>
+          <div class="round-card-meta">
+            <span>${data.active} active jobs</span>
+            <span style="color:var(--green)">£${data.monthly.toFixed(0)}/mo</span>
+          </div>
+          ${r.operative?`<div style="margin-top:6px"><span style="font-size:10px;color:${opColour(r.operative)}">${r.operative}</span></div>`:''}
+        </div>`;
+      }).join('')}
+    </div>
+    <div id="roundDetail"></div>
+  `;
+}
+
+function openRound(nameEnc){
+  const name=decodeURIComponent(nameEnc);
+  const jobs=allJobs.filter(j=>j.round_name===name);
+  const active=jobs.filter(j=>j.status==='active');
+  const monthly=active.reduce((s,j)=>s+weeklyValue(j.price,j.frequency)*4.33,0);
+  const round=allRounds.find(r=>r.name===name)||{};
+
+  const el=document.getElementById('roundDetail');
+  if(!el) return;
+
+  el.innerHTML=`
+    <div class="section-header" style="margin-top:8px">
+      <h2>${name}</h2>
+      <span style="font-size:12px;color:var(--text3)">${active.length} active · £${monthly.toFixed(0)}/mo</span>
+    </div>
+    <div class="split-view">
+      <div class="split-left">
+        <div class="card-sm" style="margin-bottom:12px">
+          <table style="width:100%;font-size:13px;border-collapse:collapse">
+            <thead><tr><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Customer</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Address</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Price</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Next due</th><th style="padding:6px 8px;text-align:left;color:var(--text3);font-size:11px;border-bottom:1px solid var(--border)">Status</th></tr></thead>
+            <tbody>
+              ${jobs.map(j=>`
+                <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
+                  <td style="padding:7px 8px;border-bottom:1px solid var(--border);font-weight:500">${j.customer_name||'—'}</td>
+                  <td style="padding:7px 8px;border-bottom:1px solid var(--border);color:var(--text3);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(j.address)}</td>
+                  <td style="padding:7px 8px;border-bottom:1px solid var(--border);color:var(--green);font-weight:600">£${j.price||0}</td>
+                  <td style="padding:7px 8px;border-bottom:1px solid var(--border)" class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</td>
+                  <td style="padding:7px 8px;border-bottom:1px solid var(--border)"><span class="badge badge-${j.status}">${j.status}</span></td>
+                </tr>`).join('')}
+            </tbody>
+          </table>
+        </div>
+      </div>
+      <div class="split-right">
+        <div class="map-container"><div id="roundMap"></div></div>
+        <div class="card-sm">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:8px;text-transform:uppercase;letter-spacing:0.5px">Round summary</div>
+          <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
+            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Active</div><div style="font-size:18px;font-weight:700;color:var(--blue)">${active.length}</div></div>
+            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Monthly</div><div style="font-size:18px;font-weight:700;color:var(--green)">£${monthly.toFixed(0)}</div></div>
+            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Annual</div><div style="font-size:18px;font-weight:700;color:var(--green)">£${(monthly*12).toFixed(0)}</div></div>
+            <div style="background:var(--bg3);border-radius:8px;padding:10px"><div style="font-size:10px;color:var(--text3)">Inactive</div><div style="font-size:18px;font-weight:700;color:var(--text3)">${jobs.filter(j=>j.status==='inactive').length}</div></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  // Init map
+  setTimeout(()=>initRoundMap(jobs.filter(j=>j.lat&&j.lng)),100);
+  el.scrollIntoView({behavior:'smooth'});
+}
+
+function initRoundMap(jobs){
+  if(roundMap){roundMap.remove();roundMap=null;}
+  roundMap=L.map('roundMap').setView([54.0,-1.5],10);
+  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
+    attribution:'© OpenStreetMap © CARTO',subdomains:'abcd',maxZoom:19
+  }).addTo(roundMap);
+
+  if(!jobs.length){roundMap.setView([54.0,-1.5],8);return;}
+
+  const bounds=[];
+  jobs.forEach(j=>{
+    const colour=j.status==='active'?'#10B981':'#64748B';
+    const icon=L.divIcon({
+      html:`<div style="width:22px;height:22px;border-radius:50% 50% 50% 0;background:${colour};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.4)"></div>`,
+      iconSize:[22,22],iconAnchor:[11,22],className:''
+    });
+    const m=L.marker([j.lat,j.lng],{icon}).addTo(roundMap);
+    m.bindPopup(`<b>${j.customer_name}</b><br>${j.address}<br>£${j.price} · ${freqLabel(j.frequency)}`);
+    bounds.push([j.lat,j.lng]);
+  });
+  if(bounds.length) roundMap.fitBounds(bounds,{padding:[20,20]});
+}
+
+// ── ALL JOBS
+let jobsFilter='all';
+function renderJobsList(c){
+  let filtered=allJobs;
+  if(jobsFilter!=='all') filtered=allJobs.filter(j=>j.status===jobsFilter);
+
+  c.innerHTML=`
+    <div class="section-header">
+      <h2>All jobs <span style="font-size:13px;color:var(--text3);font-weight:400">(${filtered.length})</span></h2>
+      <button class="btn btn-primary btn-sm" onclick="openAddJobPanel()">+ Add job</button>
+    </div>
+    <div class="filter-bar">
+      <button class="filter-btn ${jobsFilter==='all'?'active':''}" onclick="setJobsFilter('all',this)">All (${allJobs.length})</button>
+      <button class="filter-btn ${jobsFilter==='active'?'active':''}" onclick="setJobsFilter('active',this)">Active (${allJobs.filter(j=>j.status==='active').length})</button>
+      <button class="filter-btn ${jobsFilter==='inactive'?'active':''}" onclick="setJobsFilter('inactive',this)">Inactive (${allJobs.filter(j=>j.status==='inactive').length})</button>
+      <button class="filter-btn ${jobsFilter==='prospect'?'active':''}" onclick="setJobsFilter('prospect',this)">Prospects (${allJobs.filter(j=>j.status==='prospect').length})</button>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Customer</th><th>Address</th><th>Round</th><th>Assignee</th><th>Price</th><th>Frequency</th><th>Last done</th><th>Next due</th><th>Balance</th><th>Status</th></tr></thead>
+          <tbody>
+            ${filtered.map(j=>`
+              <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
+                <td style="font-weight:500;white-space:nowrap">${j.customer_name||'—'}</td>
+                <td style="color:var(--text3);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px">${shortAddr(j.address)}</td>
+                <td><span class="badge badge-round">${j.round_name||'—'}</span></td>
+                <td><span style="font-size:11px;color:${opColour(firstOp(j.assignee))}">${firstOp(j.assignee)}</span></td>
+                <td style="font-weight:600;color:var(--green)">£${j.price||0}</td>
+                <td><span class="badge badge-freq">${freqLabel(j.frequency)}</span></td>
+                <td style="color:var(--text3);font-size:12px">${fmtDate(j.last_done)}</td>
+                <td class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</td>
+                <td>${parseFloat(j.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(j.balance).toFixed(2)}</span>`:'—'}</td>
+                <td><span class="badge badge-${j.status}">${j.status}</span></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+function setJobsFilter(f,el){
+  jobsFilter=f;
+  renderJobsList(document.getElementById('pageContent'));
+}
+
+// ── CUSTOMERS
+function renderCustomers(c){
+  c.innerHTML=`
+    <div class="section-header">
+      <h2>Customers <span style="font-size:13px;color:var(--text3);font-weight:400">(${allCustomers.length})</span></h2>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Name</th><th>Address</th><th>Phone</th><th>Email</th><th>Balance</th><th>Status</th><th>Jobs</th></tr></thead>
+          <tbody>
+            ${allCustomers.map(cu=>{
+              const custJobs=allJobs.filter(j=>j.customer_id===cu.id);
+              return `<tr style="cursor:pointer" onclick="openCustomerPanel('${cu.id}')">
+                <td style="font-weight:500">${cu.name||'—'}</td>
+                <td style="color:var(--text3);font-size:12px;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(cu.address)}</td>
+                <td style="color:var(--text3);font-size:12px">${cu.phone||'—'}</td>
+                <td style="color:var(--text3);font-size:12px;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${cu.email||'—'}</td>
+                <td>${parseFloat(cu.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(cu.balance).toFixed(2)}</span>`:'—'}</td>
+                <td><span class="badge badge-${cu.status||'active'}">${cu.status||'active'}</span></td>
+                <td style="color:var(--text3)">${custJobs.length}</td>
+              </tr>`;
+            }).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ── PAYMENTS
+function renderPayments(c){
+  c.innerHTML=`
+    <div class="section-header">
+      <h2>Payments <span style="font-size:13px;color:var(--text3);font-weight:400">(${allPayments.length})</span></h2>
+      <button class="btn btn-primary btn-sm" onclick="openAddPaymentPanel()">+ Record payment</button>
+    </div>
+    ${allPayments.length?`
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Date</th><th>Customer</th><th>Amount</th><th>Method</th><th>Notes</th></tr></thead>
+          <tbody>
+            ${allPayments.map(p=>`
+              <tr>
+                <td style="color:var(--text3);font-size:12px">${fmtDate(p.payment_date)}</td>
+                <td>${p.customer_id||'—'}</td>
+                <td style="font-weight:600;color:var(--green)">£${parseFloat(p.amount||0).toFixed(2)}</td>
+                <td><span class="badge badge-freq">${p.method||'—'}</span></td>
+                <td style="color:var(--text3);font-size:12px">${p.notes||'—'}</td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>`:`
+    <div class="card">
+      <div style="text-align:center;padding:32px;color:var(--text3)">No payments recorded yet.<br><br>
+        <button class="btn btn-primary" onclick="openAddPaymentPanel()">Record first payment</button>
+      </div>
+    </div>`}
+  `;
+}
+
+// ── BALANCES
+function renderBalances(c){
+  const withBalance=allJobs.filter(j=>parseFloat(j.balance||0)>0).sort((a,b)=>parseFloat(b.balance)-parseFloat(a.balance));
+  const total=withBalance.reduce((s,j)=>s+(parseFloat(j.balance)||0),0);
+  c.innerHTML=`
+    <div class="section-header">
+      <h2>Outstanding balances</h2>
+      <span style="font-size:13px;color:var(--amber);font-weight:600">Total: £${total.toFixed(2)}</span>
+    </div>
+    <div class="card" style="padding:0">
+      <div class="table-wrap">
+        <table>
+          <thead><tr><th>Customer</th><th>Address</th><th>Round</th><th>Balance</th><th>Phone</th><th>Email</th><th>Action</th></tr></thead>
+          <tbody>
+            ${withBalance.map(j=>`
+              <tr style="cursor:pointer" onclick="openJobPanel('${j.id}')">
+                <td style="font-weight:500">${j.customer_name||'—'}</td>
+                <td style="color:var(--text3);font-size:12px;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">${shortAddr(j.address)}</td>
+                <td><span class="badge badge-round">${j.round_name||'—'}</span></td>
+                <td><span class="badge badge-balance">£${parseFloat(j.balance).toFixed(2)}</span></td>
+                <td style="color:var(--text3);font-size:12px">${j.phone||'—'}</td>
+                <td style="color:var(--text3);font-size:12px">${j.email||'—'}</td>
+                <td><button class="btn btn-sm btn-success" onclick="event.stopPropagation();openRecordPayment('${j.id}')">Record payment</button></td>
+              </tr>`).join('')}
+          </tbody>
+        </table>
+      </div>
+    </div>
+  `;
+}
+
+// ── JOB DETAIL PANEL
+function openJobPanel(id){
+  const j=allJobs.find(x=>x.id===id);
+  if(!j) return;
+  document.getElementById('panelTitle').textContent=j.customer_name||'Job';
+  document.getElementById('panelSub').textContent=shortAddr(j.address);
+  document.getElementById('panelStatus').innerHTML=`<span class="badge badge-${j.status}">${j.status}</span>`;
+
+  const monthly=weeklyValue(j.price,j.frequency)*4.33;
+  const annual=monthly*12;
+
+  document.getElementById('panelBody').innerHTML=`
+    <div class="panel-section">
+      <div class="panel-section-title">Customer</div>
+      <div class="detail-row"><div class="detail-key">Name</div><div class="detail-val" style="font-weight:500">${j.customer_name||'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Address</div><div class="detail-val">${j.address||'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Phone</div><div class="detail-val">${j.phone?`<a href="tel:${j.phone}" style="color:var(--blue)">${j.phone}</a>`:'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Email</div><div class="detail-val">${j.email?`<a href="mailto:${j.email}" style="color:var(--blue);font-size:11px">${j.email}</a>`:'—'}</div></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Job details</div>
+      <div class="detail-row"><div class="detail-key">Job ref</div><div class="detail-val" style="font-size:11px;color:var(--text3)">${j.job_ref||'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Service</div><div class="detail-val">${j.service||'Window Cleaning'}</div></div>
+      <div class="detail-row"><div class="detail-key">Frequency</div><div class="detail-val">${j.frequency_raw||freqLabel(j.frequency)}</div></div>
+      <div class="detail-row"><div class="detail-key">Round</div><div class="detail-val"><span class="badge badge-round">${j.round_name||'—'}</span></div></div>
+      <div class="detail-row"><div class="detail-key">Assignee</div><div class="detail-val" style="color:${opColour(firstOp(j.assignee))}">${j.assignee||'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Notes</div><div class="detail-val" style="color:var(--text3)">${j.notes||'—'}</div></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Revenue</div>
+      <div class="detail-row"><div class="detail-key">Per visit</div><div class="detail-val" style="font-weight:600;color:var(--green)">£${j.price||0}</div></div>
+      <div class="detail-row"><div class="detail-key">Per month</div><div class="detail-val" style="color:var(--green)">£${monthly.toFixed(2)}</div></div>
+      <div class="detail-row"><div class="detail-key">Per year</div><div class="detail-val" style="color:var(--green)">£${annual.toFixed(2)}</div></div>
+      <div class="detail-row"><div class="detail-key">Balance</div><div class="detail-val">${parseFloat(j.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(j.balance).toFixed(2)} owed</span>`:'£0.00'}</div></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">History</div>
+      <div class="detail-row"><div class="detail-key">Last done</div><div class="detail-val">${fmtDate(j.last_done)}</div></div>
+      <div class="detail-row"><div class="detail-key">Next due</div><div class="detail-val" class="${dueClass(j.next_due)}">${fmtDate(j.next_due)}</div></div>
+      <div class="detail-row"><div class="detail-key">Done</div><div class="detail-val">${j.done||0} times</div></div>
+      <div class="detail-row"><div class="detail-key">Skipped</div><div class="detail-val">${j.skipped||0}</div></div>
+      <div class="detail-row"><div class="detail-key">Not done</div><div class="detail-val">${j.not_done||0}</div></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Edit job</div>
+      <div class="form-group"><label class="form-label">Price per visit (£)</label>
+        <input class="form-input" id="edit_price" type="number" step="0.50" value="${j.price||0}"></div>
+      <div class="form-group"><label class="form-label">Round</label>
+        <select class="form-input" id="edit_round">
+          ${allRounds.map(r=>`<option value="${r.name}" ${r.name===j.round_name?'selected':''}>${r.name}</option>`).join('')}
+          <option value="" ${!j.round_name?'selected':''}>— No round —</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">Status</label>
+        <select class="form-input" id="edit_status">
+          <option value="active" ${j.status==='active'?'selected':''}>Active</option>
+          <option value="inactive" ${j.status==='inactive'?'selected':''}>Inactive</option>
+          <option value="prospect" ${j.status==='prospect'?'selected':''}>Prospect</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">Notes</label>
+        <textarea class="form-input" id="edit_notes" rows="2">${j.notes||''}</textarea></div>
+      <button class="btn btn-primary" style="width:100%" onclick="saveJobEdit('${j.id}')">Save changes</button>
+    </div>
+  `;
+
+  document.getElementById('panelActions').innerHTML=`
+    <button class="btn btn-success" style="flex:1" onclick="openRecordPayment('${j.id}')">£ Record payment</button>
+    <button class="btn" style="flex:1" onclick="markJobDone('${j.id}')">✓ Mark done</button>
+    <button class="btn btn-danger" onclick="deleteJob('${j.id}')">Delete</button>
+  `;
+
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+async function saveJobEdit(id){
+  const price=parseFloat(document.getElementById('edit_price').value)||0;
+  const round_name=document.getElementById('edit_round').value;
+  const status=document.getElementById('edit_status').value;
+  const notes=document.getElementById('edit_notes').value.trim();
+  const {error}=await sb.from('jobs').update({price,round_name,status,notes}).eq('id',id);
+  if(error){showToast('Save failed','error');return;}
+  const j=allJobs.find(x=>x.id===id);
+  if(j){Object.assign(j,{price,round_name,status,notes});}
+  showToast('Job saved');
+  renderCurrentPage();
+}
+
+async function markJobDone(id){
+  const j=allJobs.find(x=>x.id===id);
+  if(!j) return;
+  const newDone=(j.done||0)+1;
+  const lastDone=todayStr;
+  const {error}=await sb.from('jobs').update({done:newDone,last_done:lastDone}).eq('id',id);
+  if(error){showToast('Failed','error');return;}
+  Object.assign(j,{done:newDone,last_done:lastDone});
+  showToast('Marked as done');
+  openJobPanel(id);
+}
+
+async function deleteJob(id){
+  if(!confirm('Delete this job permanently?')) return;
+  const {error}=await sb.from('jobs').delete().eq('id',id);
+  if(error){showToast('Delete failed','error');return;}
+  allJobs=allJobs.filter(j=>j.id!==id);
+  closePanel();
+  showToast('Job deleted');
+  renderCurrentPage();
+}
+
+// ── CUSTOMER PANEL
+function openCustomerPanel(id){
+  const cu=allCustomers.find(x=>x.id===id);
+  if(!cu) return;
+  const custJobs=allJobs.filter(j=>j.customer_id===id);
+  document.getElementById('panelTitle').textContent=cu.name;
+  document.getElementById('panelSub').textContent=shortAddr(cu.address);
+  document.getElementById('panelStatus').innerHTML=`<span class="badge badge-${cu.status||'active'}">${cu.status||'active'}</span>`;
+  document.getElementById('panelBody').innerHTML=`
+    <div class="panel-section">
+      <div class="panel-section-title">Contact</div>
+      <div class="detail-row"><div class="detail-key">Reference</div><div class="detail-val" style="font-size:11px;color:var(--text3)">${cu.reference||'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Address</div><div class="detail-val">${cu.address||'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Phone</div><div class="detail-val">${cu.phone?`<a href="tel:${cu.phone}" style="color:var(--blue)">${cu.phone}</a>`:'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Email</div><div class="detail-val">${cu.email?`<a href="mailto:${cu.email}" style="color:var(--blue);font-size:11px">${cu.email}</a>`:'—'}</div></div>
+      <div class="detail-row"><div class="detail-key">Balance</div><div class="detail-val">${parseFloat(cu.balance||0)>0?`<span class="badge badge-balance">£${parseFloat(cu.balance).toFixed(2)}</span>`:'£0.00'}</div></div>
+    </div>
+    <div class="panel-section">
+      <div class="panel-section-title">Jobs (${custJobs.length})</div>
+      ${custJobs.map(j=>`
+        <div style="padding:8px;background:var(--bg3);border-radius:8px;margin-bottom:6px;cursor:pointer" onclick="openJobPanel('${j.id}')">
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <span style="font-size:12px;font-weight:500">${j.service||'Window Cleaning'}</span>
+            <span style="font-size:12px;color:var(--green);font-weight:600">£${j.price}</span>
+          </div>
+          <div style="font-size:11px;color:var(--text3);margin-top:3px">${j.round_name||'No round'} · ${freqLabel(j.frequency)} · <span class="badge badge-${j.status}" style="font-size:9px">${j.status}</span></div>
+          <div style="font-size:11px;color:var(--text3);margin-top:2px">Next due: ${fmtDate(j.next_due)}</div>
+        </div>`).join('')}
+    </div>
+  `;
+  document.getElementById('panelActions').innerHTML=`<button class="btn" style="flex:1" onclick="closePanel()">Close</button>`;
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+// ── ADD PAYMENT PANEL
+function openRecordPayment(jobId){
+  const j=allJobs.find(x=>x.id===jobId);
+  document.getElementById('panelTitle').textContent='Record Payment';
+  document.getElementById('panelSub').textContent=j?j.customer_name:'';
+  document.getElementById('panelStatus').innerHTML='';
+  document.getElementById('panelBody').innerHTML=`
+    <div class="panel-section">
+      <div class="form-group"><label class="form-label">Amount (£)</label>
+        <input class="form-input" id="pay_amount" type="number" step="0.01" placeholder="0.00" value="${j?parseFloat(j.balance||0).toFixed(2):''}"></div>
+      <div class="form-group"><label class="form-label">Payment method</label>
+        <select class="form-input" id="pay_method">
+          <option value="cash">Cash</option>
+          <option value="bacs">BACS</option>
+          <option value="gocardless">GoCardless</option>
+          <option value="stripe">Stripe</option>
+          <option value="cheque">Cheque</option>
+        </select></div>
+      <div class="form-group"><label class="form-label">Date</label>
+        <input class="form-input" id="pay_date" type="date" value="${todayStr}"></div>
+      <div class="form-group"><label class="form-label">Notes</label>
+        <input class="form-input" id="pay_notes" placeholder="Optional reference..."></div>
+    </div>
+  `;
+  document.getElementById('panelActions').innerHTML=`
+    <button class="btn btn-success" style="flex:1" onclick="savePayment('${jobId}')">Save payment</button>
+    <button class="btn" onclick="closePanel()">Cancel</button>
+  `;
+  document.getElementById('detailPanel').classList.add('open');
+}
+
+async function savePayment(jobId){
+  const amount=parseFloat(document.getElementById('pay_amount').value)||0;
+  const method=document.getElementById('pay_method').value;
+  const date=document.getElementById('pay_date').value;
+  const notes=document.getElementById('pay_notes').value.trim();
+  if(!amount){showToast('Enter an amount','error');return;}
+
+  const j=allJobs.find(x=>x.id===jobId);
+  const payment={id:genId(),customer_id:j?j.customer_id:'',job_id:jobId,amount,method,notes,payment_date:date,reference:''};
+
+  const {error}=await sb.from('payments').insert(payment);
+  if(error){showToast('Failed to save payment','error');return;}
+
+  // Update job balance
+  if(j){
+    const newBalance=Math.max(0,(parseFloat(j.balance)||0)-amount);
+    await sb.from('jobs').update({balance:newBalance}).eq('id',jobId);
+    j.balance=newBalance;
   }
 
-  html+=`<hr class="divider"><div class="analytics-title">By frequency</div>
-    ${activeFreqs.length?activeFreqs.map(f=>{
-      const b=fb[f.value];
-      const pct=ta?Math.min(100,(b.annual/ta)*100).toFixed(0):0;
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
-        <span style="font-size:12px;color:var(--text-secondary);width:72px;">${f.label}</span>
-        <span style="font-size:11px;color:var(--text-secondary);width:38px;text-align:right;">${b.count} job${b.count!==1?'s':''}</span>
-        <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:6px;overflow:hidden;">
-          <div style="width:${pct}%;height:6px;background:var(--blue);border-radius:3px;"></div>
-        </div>
-        <span style="font-size:12px;font-weight:600;min-width:66px;text-align:right;">£${b.annual.toFixed(0)}/yr</span>
-      </div>`;
-    }).join(''):'<div class="empty-state" style="padding:10px 0">No data yet</div>'}
-    <hr class="divider"><div class="analytics-title">By month canvassed</div>
-    ${months.length?months.map(m=>{
-      const pct=Math.min(100,(bm[m].annual/maxMA)*100).toFixed(0);
-      return `<div style="display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:0.5px solid var(--border);">
-        <span style="font-size:12px;color:var(--text-secondary);width:46px;">${new Date(m+'-15').toLocaleDateString('en-GB',{month:'short',year:'2-digit'})}</span>
-        <div style="flex:1;background:var(--bg-secondary);border-radius:3px;height:6px;overflow:hidden;">
-          <div style="width:${pct}%;height:6px;background:var(--green);border-radius:3px;"></div>
-        </div>
-        <span style="font-size:12px;font-weight:600;min-width:70px;text-align:right;">£${bm[m].annual.toFixed(0)}/yr</span>
-        <span style="font-size:11px;color:var(--text-secondary);min-width:44px;text-align:right;">${bm[m].count} job${bm[m].count!==1?'s':''}</span>
-      </div>`;
-    }).join(''):'<div class="empty-state" style="padding:10px 0">No data yet</div>'}`;
-  c.innerHTML=html;
+  allPayments.unshift(payment);
+  showToast(`Payment of £${amount.toFixed(2)} recorded`);
+  closePanel();
+  renderCurrentPage();
 }
 
-function initMap() {
-  map=L.map('map').setView([53.9917,-1.5426],13);
-  L.tileLayer('https://{s}.basemaps.cartocdn.com/rastertiles/voyager/{z}/{x}/{y}{r}.png',{
-    attribution:'&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/">CARTO</a>',
-    subdomains:'abcd',maxZoom:19
-  }).addTo(map);
+function openAddPaymentPanel(){openRecordPayment('');}
+
+// ── ADD JOB PANEL
+function openAddJobPanel(){
+  document.getElementById('panelTitle').textContent='Add new job';
+  document.getElementById('panelSub').textContent='';
+  document.getElementById('panelStatus').innerHTML='';
+  document.getElementById('panelBody').innerHTML=`
+    <div class="panel-section">
+      <div class="form-group"><label class="form-label">Customer name *</label><input class="form-input" id="new_name" placeholder="Full name"></div>
+      <div class="form-group"><label class="form-label">Address *</label><input class="form-input" id="new_addr" placeholder="Full address"></div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Phone</label><input class="form-input" id="new_phone" placeholder="07..."></div>
+        <div class="form-group"><label class="form-label">Email</label><input class="form-input" id="new_email" type="email" placeholder="email@..."></div>
+      </div>
+      <div class="form-row">
+        <div class="form-group"><label class="form-label">Price (£) *</label><input class="form-input" id="new_price" type="number" step="0.50" placeholder="0.00"></div>
+        <div class="form-group"><label class="form-label">Frequency</label>
+          <select class="form-input" id="new_freq">
+            <option value="1w">1-weekly</option>
+            <option value="2w">2-weekly</option>
+            <option value="4w" selected>4-weekly</option>
+            <option value="6w">6-weekly</option>
+            <option value="8w">8-weekly</option>
+            <option value="12w">12-weekly</option>
+            <option value="ad_hoc">Ad hoc</option>
+          </select></div>
+      </div>
+      <div class="form-group"><label class="form-label">Round</label>
+        <select class="form-input" id="new_round">
+          <option value="">— No round —</option>
+          ${allRounds.map(r=>`<option value="${r.name}">${r.name}</option>`).join('')}
+        </select></div>
+      <div class="form-group"><label class="form-label">Assignee</label>
+        <select class="form-input" id="new_assignee">
+          <option value="">— Unassigned —</option>
+          ${['Nick Kennedy','Danny','Jonny','Junior','Jordan','Austin','Thierry','Adam Steward'].map(op=>`<option value="${op}">${op}</option>`).join('')}
+        </select></div>
+      <div class="form-group"><label class="form-label">Notes</label><textarea class="form-input" id="new_notes" rows="2" placeholder="Access info..."></textarea></div>
+    </div>
+  `;
+  document.getElementById('panelActions').innerHTML=`
+    <button class="btn btn-primary" style="flex:1" onclick="saveNewJob()">Add job</button>
+    <button class="btn" onclick="closePanel()">Cancel</button>
+  `;
+  document.getElementById('detailPanel').classList.add('open');
 }
 
-function renderMarkers() {
-  if (!map) return;
-  jobs.forEach(j=>{
-    if (j.lat&&j.lng&&!markers[j.id]) {
-      const isToday=j.dateAdded===todayStr;
-      const colour=isToday?'#185FA5':'#0F6E56';
-      const icon=L.divIcon({
-        html:`<div style="width:26px;height:26px;border-radius:50% 50% 50% 0;background:${colour};transform:rotate(-45deg);border:2px solid white;box-shadow:0 2px 4px rgba(0,0,0,0.3)"></div>`,
-        iconSize:[26,26],iconAnchor:[13,26],className:''
-      });
-      const f=freqByValue(j.frequency);
-      const ann=annualValue(j.price,j.frequency).toFixed(2);
-      const m=L.marker([j.lat,j.lng],{icon}).addTo(map);
-      m.bindPopup(`<strong>${j.name}</strong><br>${j.address}, ${j.postcode}<br>£${j.price}/visit &middot; ${f.label}<br><strong>£${ann}/year</strong>${j.canvasser?'<br><em>Added by '+j.canvasser+'</em>':''}`);
-      m.on('click',()=>{
-        selectedJob=j.id;
-        if(currentTab==='list') renderTab();
-        else { currentTab='list'; document.querySelectorAll('.tab')[1].click(); }
-      });
-      markers[j.id]=m;
-    }
-  });
+async function saveNewJob(){
+  const name=document.getElementById('new_name').value.trim();
+  const addr=document.getElementById('new_addr').value.trim();
+  const price=parseFloat(document.getElementById('new_price').value)||0;
+  if(!name||!addr||!price){showToast('Please fill required fields','error');return;}
+
+  const custId=genId();
+  const jobId=genId();
+  const cu={id:custId,reference:'',name,address:addr,phone:document.getElementById('new_phone').value.trim(),email:document.getElementById('new_email').value.trim(),status:'active',balance:0};
+  const job={id:jobId,job_ref:'',customer_id:custId,customer_name:name,address:addr,phone:cu.phone,email:cu.email,status:'active',balance:0,assignee:document.getElementById('new_assignee').value,notes:document.getElementById('new_notes').value.trim(),service:'Window Cleaning',frequency:document.getElementById('new_freq').value,round_name:document.getElementById('new_round').value,price,duration:'00:30',occurrences:0,not_done:0,skipped:0,done:0,last_done:null,next_due:null,source:''};
+
+  const {error:ce}=await sb.from('customers').insert(cu);
+  if(ce){showToast('Failed to save customer','error');return;}
+  const {error:je}=await sb.from('jobs').insert(job);
+  if(je){showToast('Failed to save job','error');return;}
+
+  allCustomers.push(cu);
+  allJobs.push(job);
+  showToast('Job added: '+name);
+  closePanel();
+  renderCurrentPage();
 }
 
-async function geocode(job) {
-  try {
-    const q=encodeURIComponent(job.address+', '+job.postcode+', UK');
-    const r=await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${q}&limit=1`);
-    const d=await r.json();
-    if (d&&d.length) {
-      job.lat=parseFloat(d[0].lat); job.lng=parseFloat(d[0].lon);
-      await saveJob(job);
-      renderMarkers();
-      map.setView([job.lat,job.lng],15);
-    }
-  } catch(e){}
+// ── SEARCH
+function onSearch(val){
+  if(!val||val.length<2){hideSearch();return;}
+  const q=val.toLowerCase();
+  const results=allJobs.filter(j=>
+    (j.customer_name||'').toLowerCase().includes(q)||
+    (j.address||'').toLowerCase().includes(q)||
+    (j.phone||'').includes(q)||
+    (j.round_name||'').toLowerCase().includes(q)
+  ).slice(0,10);
+
+  const el=document.getElementById('searchResults');
+  if(!results.length){el.style.display='none';return;}
+  el.style.display='block';
+  el.innerHTML=results.map(j=>`
+    <div class="search-result-item" onclick="openJobPanel('${j.id}');document.getElementById('globalSearch').value='';hideSearch()">
+      <div class="sri-name">${j.customer_name||'—'}</div>
+      <div class="sri-addr">${shortAddr(j.address)}</div>
+      <div class="sri-meta">
+        <span class="badge badge-round" style="font-size:9px">${j.round_name||'—'}</span>
+        <span style="font-size:10px;color:var(--green)">£${j.price}</span>
+        <span class="badge badge-${j.status}" style="font-size:9px">${j.status}</span>
+      </div>
+    </div>`).join('');
 }
 
-function locateMe() {
-  if (!navigator.geolocation) { showToast('Geolocation not available'); return; }
-  navigator.geolocation.getCurrentPosition(
-    p=>map.setView([p.coords.latitude,p.coords.longitude],15),
-    ()=>showToast('Could not get your location')
-  );
+function hideSearch(){document.getElementById('searchResults').style.display='none';}
+
+// ── PANEL
+function closePanel(){document.getElementById('detailPanel').classList.remove('open');}
+
+// ── HELPERS
+function shortAddr(a){
+  if(!a) return '—';
+  const parts=a.split(',');
+  return parts.slice(0,2).join(',').trim();
 }
 
-function exportCSV() {
-  if (!jobs.length) { showToast('No jobs to export'); return; }
-  const headers=['Name','Address','Postcode','Mobile','Email','Frequency','Visits per year','Price per visit (£)','Annual value (£)','Monthly value (£)','Notes','Canvasser','Date added'];
-  const rows=jobs.map(j=>{
-    const f=freqByValue(j.frequency);
-    const vpy=f.visitsPerYear?Math.round(f.visitsPerYear*10)/10:0;
-    return [j.name,j.address,j.postcode,j.mobile||'',j.email||'',f.label,vpy,j.price,
-      annualValue(j.price,j.frequency).toFixed(2),monthlyValue(j.price,j.frequency).toFixed(2),
-      j.notes||'',j.canvasser||'',j.dateAdded].map(v=>`"${String(v).replace(/"/g,'""')}"`);
-  });
-  const csv=[headers.join(','),...rows.map(r=>r.join(','))].join('\n');
-  const blob=new Blob(['\ufeff'+csv],{type:'text/csv;charset=utf-8;'});
-  const a=document.createElement('a');
-  a.href=URL.createObjectURL(blob);
-  a.download=`wcc_local_jobs_${todayStr}.csv`;
-  document.body.appendChild(a); a.click(); document.body.removeChild(a);
-  showToast('CSV exported!');
+function freqLabel(f){
+  const m={'1w':'Weekly','2w':'2-weekly','4w':'4-weekly','6w':'6-weekly','8w':'8-weekly','12w':'12-weekly','ad_hoc':'Ad hoc'};
+  return m[f]||f||'—';
 }
 
-initMap();
-loadJobs();
+function weeklyValue(price,freq){
+  const p=parseFloat(price)||0;
+  const m={'1w':1,'2w':0.5,'4w':0.25,'6w':1/6,'8w':0.125,'12w':1/12,'ad_hoc':0};
+  return p*(m[freq]||0);
+}
+
+function fmtDate(d){
+  if(!d||d==='never') return '—';
+  try{
+    const dt=new Date(d+'T12:00:00');
+    return dt.toLocaleDateString('en-GB',{day:'numeric',month:'short',year:'2-digit'});
+  }catch(e){return d;}
+}
+
+function dueClass(d){
+  if(!d||d==='never') return 'due-future';
+  if(d<todayStr) return 'due-overdue';
+  if(d===todayStr) return 'due-today';
+  return 'due-future';
+}
+
+function firstOp(assignee){
+  if(!assignee) return '—';
+  return assignee.split(',')[0].trim();
+}
+
+function normaliseOp(assignee){
+  if(!assignee) return ['Unknown'];
+  return assignee.split(',').map(s=>s.trim()).filter(Boolean);
+}
+
+// ── Boot
+loadAll();
 </script>
 </body>
 </html>
